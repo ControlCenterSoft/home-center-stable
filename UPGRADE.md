@@ -1,11 +1,25 @@
-# Upgrade
+# Обновление и rollback Home Center
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+Перед каждым обновлением проверьте `SHA256SUMS`, встроенный `MANIFEST.sha256`, `VERSION`, `REVISION`, release manifest, acceptance evidence и совместимость конфигурации. Новую версию размещайте в новом каталоге, предыдущий неизменяемый каталог сохраняйте до завершения post-update проверки.
+
+## Порядок для multi-node
+
+Обновление выполняется последовательно, по одному узлу. Для двухузлового профиля сначала обновляется peer/вторичный узел, затем проверяются service health, release identity, доступность данных и требуемая репликация/согласованность. Только после успешной проверки обновляется coordinator/первичный узел. При ошибке на первом узле переход ко второму запрещён до безопасного восстановления.
+
+## Проверка после обновления
+
+После каждого шага подтвердите:
+
+- ожидаемые `VERSION` и `REVISION`;
+- активное состояние сервисов;
+- отсутствие неожиданного version/revision drift;
+- доступность обязательных данных и функций;
+- отсутствие Degraded/Unknown, замаскированного как Healthy.
+
+Rollback выполняется возвратом указателя на предыдущий проверенный релиз с последующей проверкой service health и release identity. Если изменение данных несовместимо с прямым rollback, используйте предусмотренный forward-recovery path.
+
+## Важно для Stable 0.51.0
+
+Штатный auto-updater допускает релиз только при наличии двух согласованных источников SHA-256: digest GitHub asset и отдельного файла `home-center-<version>-linux-amd64.tar.gz.sha256`. В опубликованном Stable 0.51.0 присутствует `SHA256SUMS`, но отдельный `.sha256` sidecar для Linux-архива не опубликован. Поэтому текущий auto-updater не должен рассматриваться как рабочий путь автоматического перехода на 0.51.0 до публикации совместимого release asset set либо квалифицированного изменения updater.
+
+До устранения расхождения используйте только явно выбранный официальный Stable-артефакт, проверяйте его по `SHA256SUMS` и выполняйте контролируемое rolling-обновление по описанному выше порядку. Не отключайте checksum-проверки ради обхода блокировки.
