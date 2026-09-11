@@ -1,10 +1,7 @@
-# Operations
+# Эксплуатация
 
-Monitor the authenticated health, typed infrastructure inventory, TLS, backup,
-and audit views. Treat inventory identity inconsistencies as unavailable state;
-the API intentionally does not expose rejected persisted facts.
-Keep two independently verified backups and test restore regularly. Use the
-backup timer for scheduled copies. Local-administrator provisioning and
-recovery entrypoints require a local root-controlled console. Treat degraded
-peer health, incomplete release identity, audit-chain failure, and malformed
-configuration as blocking conditions.
+Контролируйте аутентифицированные health-представления, типизированную inventory инфраструктуры, TLS, backup и Audit. Несогласованность identity в inventory трактуется как недоступное состояние; API намеренно не выдаёт отклонённые persisted facts как достоверные.
+
+Храните как минимум две независимо проверенные резервные копии и регулярно проверяйте восстановление. Для плановых копий используйте штатный backup timer.
+
+Provisioning и recovery локального администратора требуют локальной консоли под контролем root. Degraded peer health, неполная release identity, ошибка Audit chain и некорректная конфигурация являются блокирующими состояниями и должны быть устранены до опасных изменяющих операций.
