@@ -1,15 +1,23 @@
-# Configuration
+# Конфигурация Home Center
 
-Copy one of the files under `deploy/config` and replace every example value.
-The current configuration is closed by `home-center.config.v5` and defines
-cluster and node identity, management addresses, Web and peer ports, state and
-backup paths, local-administrator storage, optional directory authentication,
-TLS files, an external-access boundary, and zero to 63 explicit peer endpoints.
-The runtime also accepts the 0.14 `home-center.config.v4` single-peer shape for
-staged upgrades. Addresses in
-`192.0.2.0/24` and names below `example.invalid` are documentation values.
+Скопируйте подходящий пример из `deploy/config` и замените **все** демонстрационные значения. Не разворачивайте production/рабочую систему с documentation values без проверки.
 
-The v1 profile under `deploy/profiles` is a two-node example. The v2 profile
-under `deploy/examples` demonstrates the portable one-to-64-node planning
-shape. Keep automatic failover disabled unless the deployment has an
-independently proven fencing design.
+Текущая конфигурация ограничена schema `home-center.config.v5` и задаёт:
+
+- cluster и node identity;
+- management addresses;
+- Web и peer ports;
+- state и backup paths;
+- хранение локального администратора;
+- опциональную directory authentication;
+- TLS files;
+- external-access boundary;
+- от нуля до 63 явно заданных peer endpoints.
+
+Runtime также принимает устаревшую single-peer форму `home-center.config.v4` как совместимый путь staged upgrade. Перед расширением topology переведите конфигурацию на v5.
+
+Адреса из `192.0.2.0/24` и имена в `example.invalid` являются только документационными примерами и не должны использоваться как рабочая конфигурация.
+
+Профиль v1 в `deploy/profiles` — двухузловой пример. Профиль v2 в `deploy/examples` показывает переносимую модель планирования для 1–64 узлов.
+
+Автоматический failover оставляйте отключённым, пока для конкретного deployment не доказаны fencing, quorum, failure/recovery и data-safety semantics. Наличие двух или более серверов само по себе не является HA.
