@@ -35,3 +35,4 @@ jobs:
             exit 66
           fi
           echo "CLEARED_PROMOTION_BRANCH=$target"
+          echo "RETRY_AFTER_REF_PROPAGATION=1"
