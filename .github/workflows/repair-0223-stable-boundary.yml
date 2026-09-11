@@ -1,0 +1,81 @@
+name: Repair Home Center 0.22.3 Stable boundary
+
+on:
+  push:
+    branches: ['promote/0.22.3']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-home-center-0223-stable-boundary
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: >-
+      github.repository == 'ControlCenterSoft/home-center-stable' &&
+      github.event.head_commit.message == 'ci: restore required Stable runtime boundary for 0.22.3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout exact promotion head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: ${{ github.sha }}
+
+      - name: Restore Stable compatibility boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(cat VERSION)" = '0.22.3'
+          git fetch origin main
+          git checkout origin/main -- \
+            deploy/config \
+            deploy/profiles \
+            deploy/runtime/recover-local-admin.py
+          rm -f .github/workflows/repair-0223-stable-boundary.yml
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+
+      - name: Rebuild canonical source manifest
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -f SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          import importlib.util
+          import sys
+          from pathlib import Path
+          tool = Path('deploy/scripts/build-release.py')
+          spec = importlib.util.spec_from_file_location('stable_release_tool', tool)
+          assert spec is not None and spec.loader is not None
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          module.create_source_manifest(Path.cwd())
+          PY
+
+      - name: Verify hardened Stable source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+          PYTHONPATH=product/control-plane/src python3 -m unittest discover -v -s tests -p 'test_*.py'
+          python3 tests/security_gate_public_release.py
+          PYTHONPATH=product/control-plane/src python3 -c 'import home_center.actions, home_center.api, home_center.module_admission, home_center.server'
+
+      - name: Commit repaired candidate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'release: restore Stable runtime compatibility boundary for 0.22.3'
+          git push origin 'HEAD:promote/0.22.3'
