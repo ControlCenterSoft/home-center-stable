@@ -3,7 +3,7 @@ set -Eeuo pipefail
 export LC_ALL=C
 umask 077
 
-RELEASES_API="${HOME_CENTER_RELEASES_API:-https://api.github.com/repos/ControlCenterSoft/home-center-development/releases?per_page=30}"
+RELEASES_API="${HOME_CENTER_RELEASES_API:-https://api.github.com/repos/ControlCenterSoft/home-center-stable/releases?per_page=30}"
 COORDINATOR="${HOME_CENTER_UPDATE_COORDINATOR:-}"
 PEER="${HOME_CENTER_UPDATE_PEER:-}"
 STATE_DIR="${HOME_CENTER_UPDATE_STATE_DIR:-/var/lib/home-center-auto-update}"
@@ -107,7 +107,7 @@ for data in releases:
         continue
     artifact = by_name[artifact_name][0]
     checksum = by_name[checksum_name][0]
-    prefix = f"https://github.com/ControlCenterSoft/home-center-development/releases/download/v{version}/"
+    prefix = f"https://github.com/ControlCenterSoft/home-center-stable/releases/download/v{version}/"
     artifact_url = artifact.get("browser_download_url", "")
     checksum_url = checksum.get("browser_download_url", "")
     if artifact_url != prefix + artifact_name or checksum_url != prefix + checksum_name:
@@ -124,7 +124,7 @@ PY
 )" || fail "release metadata validation failed"
 
 if [[ -z "$candidate" ]]; then
-  log "no compatible deployment release newer than ${current_version}"
+  log "no compatible stable deployment release newer than ${current_version}"
   exit 0
 fi
 IFS=$'\t' read -r target_version artifact_url checksum_url api_digest <<<"$candidate"
@@ -165,7 +165,7 @@ bash -n "$bootstrap"
 bash -n "$installer"
 bash -n "$rollback"
 
-log "admitting deployment release ${target_version} (${actual_digest:0:12}); rolling order is peer first, coordinator second"
+log "admitting stable deployment release ${target_version} (${actual_digest:0:12}); rolling order is peer first, coordinator second"
 set +e
 bash "$bootstrap" \
   --artifact "$artifact" \
