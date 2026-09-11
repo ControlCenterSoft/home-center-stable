@@ -1,33 +1,28 @@
-# Home Center 0.53.0
+# Home Center 0.53.0 Stable
 
-Home Center is a local-first control plane for managed home infrastructure. It
-provides authenticated administration, typed read-only infrastructure
-inventory, deterministic discovery and health aggregation, safe node
-maintenance planning, backup, resource and intent planning, module admission,
-and a bounded helper for local credential rotation. Version 0.15 supports
-validated deployment profiles containing one to 64 nodes while retaining the
-two-node, single-writer profile as a conservative deployment example.
+Home Center — local-first платформа управления домашней и небольшой серверной инфраструктурой. Она предоставляет аутентифицированное администрирование, типизированную read-only инвентаризацию, детерминированное обнаружение и Health, безопасное планирование обслуживания узлов, backup/recovery, управление ресурсами и намерениями, admission модулей и ограниченный механизм локальной ротации учётных данных.
 
-## Release channels
+## Стабильный канал
 
-This repository is the **stable channel**. Version `0.53.0` is the current
-qualified PUBLIC STABLE RELEASE.
+Этот репозиторий является официальным публичным Stable-каналом Home Center.
 
-The official canonical/source line is published separately in
-[`ControlCenterSoft/home-center-development`](https://github.com/ControlCenterSoft/home-center-development),
-where the latest officially published source release is also `0.53.0`.
+**Текущий PUBLIC STABLE RELEASE: 0.53.0.**
 
-Canonical source and public stable use separate release identities. The
-checked-in `APPROVED-SOURCE.json` records the approved canonical revision and
-its mapping into this hardened public stable tree; commit SHA equality between
-the two repositories is therefore not required.
+Пользовательская возможность считается доступной только после её включения в опубликованный Stable-релиз. Наличие более позднего кода или плана не означает доступность функции пользователю.
 
-Features added after stable `0.53.0` must not be treated as available in this
-stable channel until the corresponding stable package is separately qualified
-and published here.
+## Целостность выпуска
 
-## Start here
+Перед установкой или обновлением проверяйте официальный tag/release `v0.53.0`, `SHA256SUMS`, отдельный checksum `home-center-0.53.0-linux-amd64.tar.gz.sha256`, release manifest, acceptance record и SPDX SBOM. Machine-readable release identity хранится в опубликованных release metadata.
 
-Start with [INSTALL.md](INSTALL.md), then tailor the examples described in
-[CONFIGURATION.md](CONFIGURATION.md). Release identity and integrity files are
-described in [RELEASE.md](RELEASE.md).
+Checksum/release-identity проверки отключать нельзя.
+
+## С чего начать
+
+1. [Установка](INSTALL.md)
+2. [Конфигурация](CONFIGURATION.md)
+3. [Обновление и откат](UPGRADE.md)
+4. [Эксплуатация](OPERATIONS.md)
+5. [Безопасность](SECURITY.md)
+6. [Описание выпуска](RELEASE.md)
+
+После чистой установки локальная учётная запись `admin` использует первоначальный пароль `admin`; при первом входе пароль необходимо сменить. При обновлении установленный пользователем пароль сохраняется и не должен сбрасываться к первоначальному значению.
