@@ -1,12 +1,12 @@
-# Installation
+# Установка
 
-Home Center 0.43.0 requires Linux, systemd, Python 3.12 or newer, SQLite, and
-operator-provided TLS identities. Verify `SHA256SUMS`, unpack the runtime, then
-run `sudo bash deploy/scripts/install.sh --config /path/to/config.json` to stage
-an immutable versioned directory. Add `--activate` only after reviewing the
-configuration, service units, certificate paths, and rollback prerequisites.
-The activation mode changes the `current` symlink atomically and restores the
-previous target if the services do not start successfully.
+Home Center 0.43.0 требует Linux, systemd, Python 3.12 или новее, SQLite и предоставленные оператором TLS identities.
 
-Never deploy the documentation values unchanged. Publication of a release does
-not authorize production activation.
+1. Проверьте `SHA256SUMS` для загруженного релиза.
+2. Распакуйте runtime.
+3. Выполните `sudo bash deploy/scripts/install.sh --config /path/to/config.json`, чтобы подготовить неизменяемый каталог конкретной версии.
+4. Добавляйте `--activate` только после проверки конфигурации, systemd units, путей к сертификатам и условий отката.
+
+Режим активации атомарно переключает symlink `current` и восстанавливает предыдущую цель, если сервисы не запускаются успешно.
+
+Не используйте значения из документации без адаптации к своей инфраструктуре. Сам факт публикации релиза не является разрешением на production activation.
