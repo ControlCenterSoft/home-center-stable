@@ -1,0 +1,108 @@
+name: Refine Home Center 0.49 transition gates once
+
+on:
+  push:
+    branches:
+      - fix/public-web-shape-0.49
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hc-stable-refine-0-49-gates-once
+  cancel-in-progress: false
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact fix branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Make public Web gate transition-safe and permit one retry namespace
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gate = Path('tests/security_gate_public_release.py')
+          text = gate.read_text(encoding='utf-8')
+          old = '''    expected_web = {"app.css", "app.js", "index.html", "member-change.css", "member-change.js", "planning.css", "planning.js", "release.js"}
+    require({path.name for path in (ROOT / "product/web/static").iterdir()} == expected_web, "public Web shape")'''
+          new = '''    legacy_web = {"app.css", "app.js", "index.html", "planning.css", "planning.js", "release.js"}
+    member_change_web = {"app.css", "app.js", "index.html", "member-change.css", "member-change.js", "planning.css", "planning.js", "release.js"}
+    web_shape = {path.name for path in (ROOT / "product/web/static").iterdir()}
+    require(web_shape in (legacy_web, member_change_web), "public Web shape")'''
+          if text.count(old) != 1:
+              raise SystemExit('PUBLIC_WEB_GATE_IDENTITY_MISMATCH')
+          gate.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          workflow = Path('.github/workflows/promote-qualified-stable-v7.yml')
+          text = workflow.read_text(encoding='utf-8')
+          old_if = """      github.ref_type == 'branch' &&
+      startsWith(github.ref_name, 'promote7/')"""
+          new_if = """      github.ref_type == 'branch' &&
+      (startsWith(github.ref_name, 'promote7/') ||
+       startsWith(github.ref_name, 'promote7-retry/'))"""
+          if text.count(old_if) != 1:
+              raise SystemExit('PROMOTION_TRIGGER_IDENTITY_MISMATCH')
+          text = text.replace(old_if, new_if, 1)
+          old_version = '          version="${GITHUB_REF_NAME#promote7/}"'
+          new_version = '''          case "$GITHUB_REF_NAME" in
+            promote7/*) version="${GITHUB_REF_NAME#promote7/}" ;;
+            promote7-retry/*) version="${GITHUB_REF_NAME#promote7-retry/}" ;;
+            *) fail PROMOTION_PREFIX_REJECTED ;;
+          esac'''
+          if text.count(old_version) != 1:
+              raise SystemExit('PROMOTION_VERSION_IDENTITY_MISMATCH')
+          workflow.write_text(text.replace(old_version, new_version, 1), encoding='utf-8')
+          PY
+
+          rm -f .github/workflows/refine-0.49-gates-once.yml
+          rm -f SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, os
+          root = Path.cwd()
+          ignored = {'.git','__pycache__'}
+          forbidden = {'.hc-dev','.idea','.vscode','dist','docs','ops','secrets'}
+          records = []
+          for directory, names, files in os.walk(root, topdown=True, followlinks=False):
+              base = Path(directory)
+              rel_dir = base.relative_to(root)
+              names[:] = sorted(name for name in names if name not in ignored)
+              if set(rel_dir.parts) & forbidden:
+                  raise SystemExit(f'FORBIDDEN_SOURCE_DIRECTORY:{rel_dir.as_posix()}')
+              for name in sorted(files):
+                  path = base / name
+                  rel = path.relative_to(root)
+                  if name == 'SOURCE-MANIFEST.sha256' or set(rel.parts) & ignored:
+                      continue
+                  if set(rel.parts) & forbidden:
+                      raise SystemExit(f'FORBIDDEN_SOURCE_PATH:{rel.as_posix()}')
+                  if path.is_symlink() or not path.is_file() or path.suffix in {'.pyc','.pyo'}:
+                      raise SystemExit(f'SPECIAL_SOURCE_FILE:{rel.as_posix()}')
+                  records.append((rel.as_posix(), hashlib.sha256(path.read_bytes()).hexdigest()))
+          records.sort(key=lambda item: item[0])
+          Path('SOURCE-MANIFEST.sha256').write_text(
+              ''.join(f'{digest}  {rel}\n' for rel, digest in records), encoding='ascii'
+          )
+          PY
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+
+      - name: Commit exact transition-safe gate state
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          test "$(git diff --cached --name-only | sort)" = $'.github/workflows/promote-qualified-stable-v7.yml\n.github/workflows/refine-0.49-gates-once.yml\nSOURCE-MANIFEST.sha256\ntests/security_gate_public_release.py'
+          git commit -m 'HC stable: make 0.49 public gates transition-safe'
+          git push origin HEAD:fix/public-web-shape-0.49
