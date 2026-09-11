@@ -1,33 +1,13 @@
-# Home Center 0.55.0
+# Home Center 0.55.0 Stable
 
-Home Center is a local-first control plane for managed home infrastructure. It
-provides authenticated administration, typed read-only infrastructure
-inventory, deterministic discovery and health aggregation, safe node
-maintenance planning, backup, resource and intent planning, module admission,
-and a bounded helper for local credential rotation. Version 0.15 supports
-validated deployment profiles containing one to 64 nodes while retaining the
-two-node, single-writer profile as a conservative deployment example.
+Home Center — local-first платформа управления домашней инфраструктурой. Этот репозиторий является официальным публичным Stable-каналом продукта.
 
-## Release channels
+**Текущая стабильная версия: 0.55.0.**
 
-This repository is the **stable channel**. Version `0.55.0` is the current
-qualified PUBLIC STABLE RELEASE.
+Основные возможности текущей стабильной линии: аутентифицированное администрирование, безопасная read-only инвентаризация инфраструктуры, детерминированное обнаружение и health aggregation, планирование maintenance/drain, backup/recovery foundation, Household/Intent и module compatibility boundaries, а также интерфейсы «Уютный» и «Полный».
 
-The official canonical/source line is published separately in
-[`ControlCenterSoft/home-center-development`](https://github.com/ControlCenterSoft/home-center-development),
-where the latest officially published source release is also `0.55.0`.
+После чистой установки используется локальный `admin` с первоначальным паролем `admin`. При первом входе пароль обязательно меняется; до смены пароля обычная работа запрещена. Обновление не сбрасывает установленный пользователем пароль.
 
-Canonical source and public stable use separate release identities. The
-checked-in `APPROVED-SOURCE.json` records the approved canonical revision and
-its mapping into this hardened public stable tree; commit SHA equality between
-the two repositories is therefore not required.
+Публикация Stable не разрешает автоматическую production-активацию. Перед установкой или обновлением проверяйте release identity, SHA-256, `SHA256SUMS`, manifest/acceptance evidence и выполняйте backup/rollback preflight.
 
-Features added after stable `0.55.0` must not be treated as available in this
-stable channel until the corresponding stable package is separately qualified
-and published here.
-
-## Start here
-
-Start with [INSTALL.md](INSTALL.md), then tailor the examples described in
-[CONFIGURATION.md](CONFIGURATION.md). Release identity and integrity files are
-described in [RELEASE.md](RELEASE.md).
+Документы: [установка](INSTALL.md), [обновление и rollback](UPGRADE.md), [конфигурация](CONFIGURATION.md), [безопасность](SECURITY.md), [архитектура](ARCHITECTURE.md), [API](API.md), [эксплуатация](OPERATIONS.md), [сертификаты](CERTIFICATES.md), [состав выпуска](RELEASE.md).
