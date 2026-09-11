@@ -1,33 +1,25 @@
-# Home Center 0.51.0
+# Home Center 0.51.0 Stable
 
-Home Center is a local-first control plane for managed home infrastructure. It
-provides authenticated administration, typed read-only infrastructure
-inventory, deterministic discovery and health aggregation, safe node
-maintenance planning, backup, resource and intent planning, module admission,
-and a bounded helper for local credential rotation. Version 0.15 supports
-validated deployment profiles containing one to 64 nodes while retaining the
-two-node, single-writer profile as a conservative deployment example.
+Home Center — local-first платформа управления домашней инфраструктурой. Этот репозиторий является официальным публичным Stable-каналом продукта.
 
-## Release channels
+## Текущая стабильная версия
 
-This repository is the **stable channel**. Version `0.51.0` is the current
-qualified PUBLIC STABLE RELEASE.
+**0.51.0** — текущий квалифицированный PUBLIC STABLE RELEASE.
 
-The official canonical/source line is published separately in
-[`ControlCenterSoft/home-center-development`](https://github.com/ControlCenterSoft/home-center-development),
-where the latest officially published source release is also `0.51.0`.
+Home Center поддерживает безопасное управление состоянием дома, инфраструктурную инвентаризацию, health, планирование обслуживания узлов, backup/recovery, Household/Family state, модульную совместимость и интерфейсы «Уютный» и «Полный». Пользовательские действия, способные изменить состояние, должны проходить через явные authorization/plan/confirm/verification границы.
 
-Canonical source and public stable use separate release identities. The
-checked-in `APPROVED-SOURCE.json` records the approved canonical revision and
-its mapping into this hardened public stable tree; commit SHA equality between
-the two repositories is therefore not required.
+## Аутентификация после чистой установки
 
-Features added after stable `0.51.0` must not be treated as available in this
-stable channel until the corresponding stable package is separately qualified
-and published here.
+Чистая установка создаёт локального пользователя `admin` с первоначальным паролем `admin`. При первом входе пароль необходимо обязательно изменить; до успешной смены пароля обычная работа запрещена. Обновление существующей установки сохраняет установленный пользователем пароль и не сбрасывает его.
 
-## Start here
+## Документация
 
-Start with [INSTALL.md](INSTALL.md), then tailor the examples described in
-[CONFIGURATION.md](CONFIGURATION.md). Release identity and integrity files are
-described in [RELEASE.md](RELEASE.md).
+- [Установка](INSTALL.md)
+- [Обновление и rollback](UPGRADE.md)
+- [Конфигурация](CONFIGURATION.md)
+- [Эксплуатация](OPERATIONS.md)
+- [Безопасность](SECURITY.md)
+- [Архитектура](ARCHITECTURE.md)
+- [Состав и целостность выпуска](RELEASE.md)
+
+Перед установкой или обновлением всегда проверяйте release identity, `SHA256SUMS`, встроенный `MANIFEST.sha256` и опубликованные release/acceptance evidence. Публикация релиза сама по себе не является разрешением на production-активацию.
