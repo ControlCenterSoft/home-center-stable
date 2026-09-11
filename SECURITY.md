@@ -1,7 +1,9 @@
-# Security
+# Безопасность Home Center
 
-Keep credentials and key material outside source control. Use least privilege,
-root-controlled configuration and secret files, TLS for all network listeners,
-and the fixed-action helper boundary. Report a vulnerability to the repository
-owner through a confidential channel and do not place sensitive detail in a
-public issue.
+Храните credentials, private keys и иные секреты вне исходного кода и runtime-архивов. Используйте принцип минимальных привилегий, конфигурационные и secret-файлы под контролем root, TLS для всех сетевых listeners и только фиксированные типизированные privileged actions.
+
+Не публикуйте административные endpoints напрямую в недоверенную сеть без предусмотренного защитного контура. Не отключайте checksum, release-identity или TLS-проверки ради обхода ошибок обновления.
+
+После чистой установки первоначальный пароль локального `admin` необходимо сменить при первом входе; до смены обычная работа запрещена. При обновлении пользовательский пароль не должен сбрасываться к первоначальному значению.
+
+Уязвимости сообщайте владельцу продукта по конфиденциальному каналу. Не размещайте секреты, эксплуатационные credentials, персональные данные или детали, повышающие риск эксплуатации, в публичных issue.
