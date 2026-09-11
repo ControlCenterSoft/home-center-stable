@@ -1,30 +1,11 @@
-# Release 0.43.0
+# Релиз Home Center 0.43.0
 
-The release set contains the Linux runtime archive, source archive, canonical
-SPDX 2.3 document, acceptance record, release manifest, and `SHA256SUMS`. Both
-archives contain `VERSION`, `REVISION`, and an internal `MANIFEST.sha256`.
-Verify the complete set before installation and require the published
-`v0.43.0` tag and release artifacts to agree with the release manifest.
+Набор релиза содержит Linux runtime archive, source archive, канонический документ SPDX 2.3, acceptance record, release manifest и `SHA256SUMS`. Оба архива содержат `VERSION`, `REVISION` и внутренний `MANIFEST.sha256`. Перед установкой необходимо проверить полный набор и убедиться, что опубликованный tag `v0.43.0` и артефакты релиза согласованы с release manifest.
 
-This promotion incorporates the approved Home Center development source at
-canonical revision `980e9d84736b64a6e1558bae524e4da2a1c8115a` (`v0.43.0`).
-The checked-in `APPROVED-SOURCE.json` records that canonical revision, approved
-manifest digest `f82f1d80515fab27f320a69341e1cd137154faf6ad0281c2bd5349bd5c002958`,
-the stable release-boundary revision
-`c9a9c2ab5c5ccd76369409aed5d0b906bafb77b7`, and the per-file disposition
-(`identical`, `adapted`, or `excluded`).
+Public Stable 0.43.0 сформирован из одобренного canonical source `ControlCenterSoft/home-center-development` revision `ed5937d630fa0c04557dac536c852872d1101489` (`v0.43.0`). Файл `APPROVED-SOURCE.json` фиксирует эту revision, approved manifest SHA-256 `25297ce51a04a6e9c357020d486d6a24d5f84a70500b9bfcf079260b4cdc6a2b`, stable release-boundary revision `1d2bb2a7ccecdb9e9ebadb347aa28a2739600ee7` и disposition каждого файла (`identical`, `adapted` или `excluded`).
 
-The published public `v0.43.0` annotated tag resolves to stable release commit
-`006cbf824c2a3a894a98d1619daadd0029c636b5`. This SHA intentionally differs
-from the canonical development SHA because the public stable tree applies the
-approved hardened/sanitized export mapping. Commit equality between canonical
-and public repositories is not a release requirement; the version, approved
-source mapping, manifests, checksums, SBOM and acceptance evidence are the
-authoritative link.
+Опубликованный аннотированный public tag `v0.43.0` разрешается в stable release commit `7a631c7a3a1d83ea16f04b8ec2138b7e5af03561`. Его SHA намеренно может отличаться от canonical development SHA, поскольку public stable tree использует одобренное hardened/sanitized отображение. Равенство commit SHA между canonical и public репозиториями не является требованием выпуска; авторитетную связь образуют версия, `APPROVED-SOURCE.json`, manifests, checksums, SBOM и acceptance evidence.
 
-For subsequent stable releases, `VERSION` is the canonical publication
-identity. The release branch must be exactly `release/<VERSION>`, the annotated
-tag is `v<VERSION>`, and `VERSION`, Python package metadata, and the runtime
-version must agree. Publication is permitted only through the stable release
-procedure; current documentation updates do not mutate an already published
-tag or GitHub Release.
+Текущий официальный canonical/source release уже может быть новее публичного Stable. На момент этой актуализации canonical/source release — `0.44.0`, а PUBLIC STABLE RELEASE — `0.43.0`. Наличие `0.44.0` в source-канале само по себе не разрешает его установку как Stable и не изменяет release identity 0.43.0.
+
+Для последующих stable-релизов `VERSION` является канонической publication identity. Release branch должна иметь вид `release/<VERSION>`, аннотированный tag — `v<VERSION>`, а `VERSION`, package metadata и runtime version должны совпадать. Публикация выполняется только через установленную stable release procedure; обычная правка документации не изменяет уже опубликованный tag или GitHub Release.
