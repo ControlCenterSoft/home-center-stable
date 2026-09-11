@@ -1,11 +1,19 @@
-# Upgrade
+# Home Center 0.55.0 — обновление и rollback
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+## Обязательный preflight
+
+Перед каждым обновлением проверьте отдельный SHA-256 sidecar для runtime-архива, `SHA256SUMS`, встроенный `MANIFEST.sha256`, release identity, SPDX SBOM, acceptance record и release manifest. Зафиксируйте текущую версию и health, создайте проверяемую резервную копию состояния и конфигурации и убедитесь, что предыдущий неизменяемый каталог версии сохранён.
+
+## Безопасное обновление
+
+1. Разверните новую версию в отдельный каталог без изменения текущего `current`.
+2. Проверьте конфигурацию, release identity, сертификаты и локальный health до активации.
+3. В multi-node профиле обновляйте строго по одному узлу, сохраняя минимально допустимое число готовых узлов и single-writer роль там, где она применяется. Сначала обновляется узел, потеря которого не нарушает writer/quorum/data-safety условия.
+4. После каждого узла обязательно проверьте health, peer/replication state, сервисы и фактическую версию. При ошибке не переходите к следующему узлу до безопасного восстановления.
+5. Только после успешной проверки переключайте следующий узел.
+
+Штатное обновление не должно сбрасывать пользовательские данные, настройки или установленный пользователем пароль локального администратора.
+
+## Rollback
+
+При неуспешной активации остановите продвижение, восстановите предыдущий указатель `current` и повторно проверьте health и release identity. Если изменение затронуло stateful данные, используйте только документированный recovery/forward-recovery path и проверенную резервную копию; не объявляйте успех до post-condition verification.
