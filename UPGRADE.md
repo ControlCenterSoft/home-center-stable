@@ -1,11 +1,30 @@
-# Upgrade
+# Обновление и rollback Home Center
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+## Обязательные проверки перед обновлением
+
+Для каждого обновления проверьте официальный Stable release, `SHA256SUMS`, отдельный checksum Linux-архива, встроенный `MANIFEST.sha256`, release identity, SPDX SBOM, acceptance record и release manifest. Любое расхождение — блокирующее.
+
+Перед изменением узла зафиксируйте текущую версию и Health, создайте проверяемый backup/recovery point, убедитесь в наличии предыдущего immutable release directory и проверьте совместимость целевого deployment profile.
+
+## Обновление single-node
+
+1. Скачайте и проверьте целевой Stable artifact.
+2. Подготовьте новую версию в отдельном каталоге без удаления предыдущей.
+3. Выполните preflight конфигурации, TLS, storage и release identity.
+4. Переключайте `current` только после локальной валидации.
+5. После запуска проверьте readiness/liveness, Web/API, Audit, backup и фактическую версию.
+6. Убедитесь, что установленный пользователем пароль `admin` не сброшен к первоначальному `admin`.
+
+## Обновление multi-node
+
+Обновляйте только по одному узлу. Перед каждым шагом сохраняйте минимально допустимое число Ready-узлов и single-writer роль там, где она применяется. После первого обновлённого узла обязательно проверьте Health, peer/replication state, сервисы и release identity. При неизвестной деградации остановите rollout и не переходите к следующему узлу до безопасного решения.
+
+## Совместимость конфигурации
+
+Текущий runtime принимает конфигурацию `home-center.config.v5`. Устаревшая single-peer форма v4 допускается только как совместимый промежуточный путь миграции; перед расширением topology её необходимо перевести на актуальную форму v5.
+
+## Rollback
+
+При неуспешном запуске или post-update проверке остановите дальнейший rollout, верните предыдущий immutable release pointer и повторно проверьте Health и release identity. Если изменение затронуло state/data несовместимым образом, используйте подтверждённый pre-update recovery point; не предполагайте, что возврат бинарных файлов автоматически откатывает данные.
+
+Checksum и release-identity проверки не отключать. Downgrade или обход fail-closed блокеров без документированного recovery path не допускается.
