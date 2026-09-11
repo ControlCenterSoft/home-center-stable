@@ -1,0 +1,197 @@
+name: Prepare qualified Home Center stable promotion
+
+on:
+  push:
+    branches: ['promote/**']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: home-center-stable-promotion-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      github.repository == 'ControlCenterSoft/home-center-stable' &&
+      startsWith(github.ref_name, 'promote/') &&
+      !startsWith(github.event.head_commit.message, 'release: prepare Home Center')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SOURCE_REPOSITORY: ControlCenterSoft/home-center-development
+      PYTHONDONTWRITEBYTECODE: '1'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with: {fetch-depth: 0, persist-credentials: true}
+      - name: Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with: {python-version: '3.12', cache: ''}
+      - name: Resolve exact identities
+        id: identity
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          fail() { echo "$1" >&2; exit 66; }
+          version="${GITHUB_REF_NAME#promote/}"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail PROMOTION_VERSION_REJECTED
+          git fetch origin main
+          stable_base="$(git rev-parse origin/main)"
+          test "$(git rev-parse HEAD^)" = "$stable_base" || fail PROMOTION_BRANCH_NOT_SINGLE_COMMIT_FROM_MAIN
+          test "$(git diff --name-only "$stable_base" HEAD)" = '.github/workflows/promote-qualified-stable.yml' || fail PROMOTION_BRANCH_CONTAINS_UNQUALIFIED_CHANGES
+          approved_revision="$(python3 -c "import json;print(json.load(open('APPROVED-SOURCE.json'))['approved_revision'])")"
+          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .draft)" = false || fail SOURCE_RELEASE_DRAFT
+          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .prerelease)" = false || fail SOURCE_RELEASE_PRERELEASE
+          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq '.assets | length')" -ge 2 || fail SOURCE_RELEASE_ASSETS_INCOMPLETE
+          git remote add approved "https://github.com/$SOURCE_REPOSITORY.git"
+          git fetch --no-tags approved main
+          git fetch --force approved "refs/tags/v$version:refs/tags/source-v$version"
+          git cat-file -e "$approved_revision^{commit}" || fail APPROVED_REVISION_UNAVAILABLE
+          source_sha="$(git rev-parse "refs/tags/source-v$version^{}")"
+          test "$(git show "$source_sha:VERSION")" = "$version" || fail SOURCE_VERSION_MISMATCH
+          git merge-base --is-ancestor "$approved_revision" "$source_sha" || fail SOURCE_NOT_DESCENDANT_OF_APPROVED_BASE
+          printf 'version=%s\nstable_base=%s\nsource_sha=%s\n' "$version" "$stable_base" "$source_sha" >> "$GITHUB_OUTPUT"
+      - name: Qualify exact source release
+        shell: bash
+        env: {SOURCE_SHA: '${{ steps.identity.outputs.source_sha }}'}
+        run: |
+          set -Eeuo pipefail
+          source_root="$RUNNER_TEMP/source"
+          git worktree add --detach "$source_root" "$SOURCE_SHA"
+          cd "$source_root"
+          python3 -m compileall -q product/control-plane/src deploy/runtime
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for path in sorted(Path('contracts').rglob('*.json')):
+              json.loads(path.read_text(encoding='utf-8'))
+          for path in sorted(Path('product/control-plane/src/home_center').glob('*.json')):
+              json.loads(path.read_text(encoding='utf-8'))
+          PY
+          rm -rf dist && mkdir -p dist/first dist/second
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" python3 -m pip wheel --no-deps --wheel-dir dist/first .
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" python3 -m pip wheel --no-deps --wheel-dir dist/second .
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" python3 scripts/qualify_release_artifact.py --wheel-dir dist/first --compare-wheel-dir dist/second
+          PYTHONPATH=product/control-plane/src python3 -m unittest discover -s tests -p 'test_*.py' -v
+          git reset --hard "$SOURCE_SHA"
+          git clean -ffdqx
+      - name: Build hardened Stable surface
+        shell: bash
+        env: {VERSION: '${{ steps.identity.outputs.version }}'}
+        run: |
+          set -Eeuo pipefail
+          source_root="$RUNNER_TEMP/source"; overlay="$RUNNER_TEMP/stable-overlay"
+          mkdir -p "$overlay/contracts/releases" "$overlay/deploy/scripts" "$overlay/tests" "$overlay/web" "$overlay/runtime"
+          cp -a contracts/releases/. "$overlay/contracts/releases/"
+          cp contracts/README.md "$overlay/contracts/README.md"
+          cp deploy/scripts/build-release.py "$overlay/deploy/scripts/build-release.py"
+          cp deploy/scripts/install.sh "$overlay/deploy/scripts/install.sh"
+          cp deploy/scripts/verify-artifact.sh "$overlay/deploy/scripts/verify-artifact.sh"
+          cp tests/security_gate_public_release.py "$overlay/tests/security_gate_public_release.py"
+          cp tests/test_approved_source.py "$overlay/tests/test_approved_source.py"
+          cp tests/test_public_release.py "$overlay/tests/test_public_release.py"
+          cp product/web/static/planning.css "$overlay/web/planning.css"
+          cp product/web/static/planning.js "$overlay/web/planning.js"
+          cp product/web/static/release.js "$overlay/web/release.js"
+          cp product/control-plane/src/home_center/product_boundary.py "$overlay/runtime/product_boundary.py"
+          rm -rf contracts deploy product
+          cp -a "$source_root/contracts" contracts; cp -a "$source_root/deploy" deploy; cp -a "$source_root/product" product
+          cp "$source_root/VERSION" VERSION; cp "$source_root/pyproject.toml" pyproject.toml
+          if test -f "$source_root/MANIFEST.in"; then cp "$source_root/MANIFEST.in" MANIFEST.in; else rm -f MANIFEST.in; fi
+          rm -rf contracts/releases; mkdir -p contracts/releases; cp -a "$overlay/contracts/releases/." contracts/releases/
+          cp "$overlay/contracts/README.md" contracts/README.md
+          find contracts/openapi -maxdepth 1 -type f ! -name 'home-center.v1.openapi.json' -delete
+          cp "$overlay/deploy/scripts/"* deploy/scripts/
+          rm -rf tests; mkdir tests; cp "$overlay/tests/"*.py tests/
+          cp "$overlay/web/"* product/web/static/
+          cp "$overlay/runtime/product_boundary.py" product/control-plane/src/home_center/product_boundary.py
+          rm -f product/control-plane/src/home_center/{module_artifact,privileged_helper_v2,qualification_0140,release_candidate,release_channel,release_manager,tls_activate,tls_maintenance,tls_reconcile,update_reconcile,upgrade_policy}.py
+          rm -rf docs scripts GEMINI.md dist
+          rm -f .github/workflows/promote-qualified-stable.yml
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          python3 - "$VERSION" <<'PY'
+          from pathlib import Path
+          import re,sys
+          v=sys.argv[1]
+          for name in ('README.md','INSTALL.md','RELEASE.md','contracts/README.md'):
+              p=Path(name)
+              if p.is_file(): p.write_text(p.read_text(encoding='utf-8').replace('v0.15.0',f'v{v}').replace('0.15.0',v),encoding='utf-8')
+          p=Path('product/web/static/release.js'); t=p.read_text(encoding='utf-8'); p.write_text(re.sub(r'version:\s*"[0-9]+\.[0-9]+\.[0-9]+"',f'version: "{v}"',t,count=1),encoding='utf-8')
+          p=Path('product/web/static/index.html')
+          if p.is_file(): p.write_text(p.read_text(encoding='utf-8').replace('0.15.0',v),encoding='utf-8')
+          PY
+          test "$(cat VERSION)" = "$VERSION"
+      - name: Rebuild provenance
+        shell: bash
+        env:
+          SOURCE_SHA: '${{ steps.identity.outputs.source_sha }}'
+          STABLE_BASE: '${{ steps.identity.outputs.stable_base }}'
+          VERSION: '${{ steps.identity.outputs.version }}'
+        run: |
+          set -Eeuo pipefail
+          python3 - "$RUNNER_TEMP/source" "$SOURCE_SHA" "$STABLE_BASE" "$VERSION" <<'PY'
+          import hashlib,json,sys
+          from pathlib import Path
+          source=Path(sys.argv[1]); source_sha,stable_base,version=sys.argv[2:]; root=Path.cwd()
+          def digest(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+          paths=[]
+          for p in source.rglob('*'):
+              if not p.is_file() or p.is_symlink(): continue
+              rel=p.relative_to(source).as_posix()
+              if '.git' in Path(rel).parts or '__pycache__' in Path(rel).parts or 'dist' in Path(rel).parts or rel.endswith(('.pyc','.pyo')): continue
+              paths.append((rel,p))
+          files=[]
+          for rel,p in sorted(paths,key=lambda x:x[0]):
+              approved=digest(p); stable=root/rel
+              if stable.is_file() and not stable.is_symlink():
+                  stable_sha=digest(stable); disposition,reason=(('identical','approved-byte-copy') if stable_sha==approved else ('adapted','hardened-stable-integration'))
+              else:
+                  stable_sha=None; disposition='excluded'; reason='stable-release-boundary' if rel.startswith('.github/') else ('stable-release-documentation' if rel.startswith('docs/') or rel=='GEMINI.md' else 'stable-public-surface')
+              files.append({'path':rel,'approved_sha256':approved,'disposition':disposition,'stable_sha256':stable_sha,'reason':reason})
+          rows=''.join(f"{x['approved_sha256']}  {x['path']}\n" for x in files).encode(); counts={n:sum(x['disposition']==n for x in files) for n in ('identical','adapted','excluded')}
+          value={'schema':'home-center.approved-source-provenance.v1','product':'home-center','version':version,'approved_repository':'ControlCenterSoft/home-center-development','approved_revision':source_sha,'approved_manifest_sha256':hashlib.sha256(rows).hexdigest(),'stable_release_boundary_revision':stable_base,'summary':{'total':len(files),**counts},'files':files}
+          Path('APPROVED-SOURCE.json').write_text(json.dumps(value,indent=2,ensure_ascii=True)+'\n',encoding='utf-8')
+          PY
+          python3 - "$SOURCE_SHA" "$STABLE_BASE" <<'PY'
+          from pathlib import Path
+          import re,sys
+          source_sha,stable_base=sys.argv[1:]; p=Path('tests/test_approved_source.py'); t=p.read_text(encoding='utf-8')
+          t,a=re.subn(r'APPROVED_REVISION = "[0-9a-f]{40}"',f'APPROVED_REVISION = "{source_sha}"',t,count=1)
+          t,b=re.subn(r'STABLE_RELEASE_BOUNDARY_REVISION = "[0-9a-f]{40}"',f'STABLE_RELEASE_BOUNDARY_REVISION = "{stable_base}"',t,count=1)
+          if (a,b)!=(1,1): raise SystemExit('PROVENANCE_TEST_CONSTANT_UPDATE_FAILED')
+          p.write_text(t,encoding='utf-8')
+          PY
+      - name: Rebuild exact source manifest
+        shell: bash
+        run: |
+          set -Eeuo pipefail; rm -f SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          import importlib.util,sys
+          from pathlib import Path
+          spec=importlib.util.spec_from_file_location('stable_release_tool',Path('deploy/scripts/build-release.py')); assert spec and spec.loader
+          module=importlib.util.module_from_spec(spec); sys.modules[spec.name]=module; spec.loader.exec_module(module); module.create_source_manifest(Path.cwd())
+          PY
+      - name: Hardened Stable qualification
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+          python3 -m compileall -q product/control-plane/src deploy/runtime
+          find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+          PYTHONPATH=product/control-plane/src python3 -m unittest discover -v -s tests -p 'test_*.py'
+          python3 tests/security_gate_public_release.py
+          PYTHONPATH=product/control-plane/src python3 -c 'import home_center.actions, home_center.api, home_center.module_admission, home_center.server'
+      - name: Commit candidate
+        shell: bash
+        env: {VERSION: '${{ steps.identity.outputs.version }}'}
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A; git diff --cached --check; git commit -m "release: prepare Home Center $VERSION stable promotion"; git push origin "HEAD:$GITHUB_REF_NAME"
