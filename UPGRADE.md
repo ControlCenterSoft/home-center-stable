@@ -1,11 +1,11 @@
-# Upgrade
+# Обновление
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+Перед каждым обновлением проверьте `SHA256SUMS`, встроенный `MANIFEST.sha256`, release identity, SPDX-документ, acceptance record и release manifest. Новую версию всегда размещайте в новом immutable versioned каталоге и сохраняйте предыдущий каталог для recovery.
+
+Переключайте `current` только после локальной проверки новой версии. В multi-node профиле обновляйте узлы последовательно, по одному, сохраняя минимально допустимое число готовых узлов и single-writer роль там, где она используется. После каждого узла проверяйте health, peer/reconciliation state, release identity и критичные сервисы; при ошибке не переходите к следующему узлу.
+
+При обновлении с legacy 0.15 допускается конфигурация `home-center.config.v4` с одним peer только как переходная форма; перед добавлением дополнительных peers преобразуйте конфигурацию в v5.
+
+Обновление не сбрасывает установленный пользователем пароль локального `admin` и не возвращает его к `admin`.
+
+Rollback выполняется возвратом предыдущего `current` pointer с последующей повторной проверкой health, release identity и согласованности состояния. Если новая версия изменила stateful данные способом, для которого pointer rollback недостаточен, используйте предусмотренный recovery path и подтверждённый backup/restore вместо объявления ложного успеха.
