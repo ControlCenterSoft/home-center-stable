@@ -1,7 +1,5 @@
-# Security
+# Безопасность
 
-Keep credentials and key material outside source control. Use least privilege,
-root-controlled configuration and secret files, TLS for all network listeners,
-and the fixed-action helper boundary. Report a vulnerability to the repository
-owner through a confidential channel and do not place sensitive detail in a
-public issue.
+Храните credentials и ключевой материал вне системы контроля версий. Используйте принцип минимальных привилегий, конфигурационные и secret-файлы под контролем root, TLS для всех сетевых listeners и фиксированную границу разрешённых helper-действий.
+
+Не размещайте секреты, приватные ключи, реальные внутренние адреса или чувствительные operational details в публичной документации, issues и обычном Audit/telemetry. При обнаружении уязвимости сообщайте владельцу репозитория по конфиденциальному каналу и не публикуйте чувствительные технические детали в открытом issue.
