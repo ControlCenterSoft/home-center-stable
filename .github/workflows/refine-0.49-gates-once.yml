@@ -1,4 +1,4 @@
-name: Recreate Home Center 0.49 promotion once
+name: Clear stale Home Center 0.49 promotion once
 
 on:
   push:
@@ -9,11 +9,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: hc-stable-recreate-0-49-promotion-once
+  group: hc-stable-clear-0-49-promotion-once
   cancel-in-progress: false
 
 jobs:
-  recreate:
+  clear:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -23,22 +23,15 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Recreate exact promotion branch from current stable main
+      - name: Delete stale promotion branch only
         shell: bash
         run: |
           set -Eeuo pipefail
-          version="0.49.0"
-          target="promote7/$version"
-          git fetch --force origin main
-          main_sha="$(git rev-parse refs/remotes/origin/main)"
-          remote_main="$(git ls-remote --exit-code origin refs/heads/main | cut -f1)"
-          test "$main_sha" = "$remote_main"
-          test "$(git show "$main_sha:VERSION")" = "0.48.0"
-          test "$(git show "$main_sha:tests/security_gate_public_release.py" | grep -c 'member_change_web = base_web')" = "1"
+          target="promote7/0.49.0"
           git ls-remote --exit-code origin "refs/heads/$target" >/dev/null
           git push origin ":refs/heads/$target"
-          git push origin "$main_sha:refs/heads/$target"
-          recreated="$(git ls-remote --exit-code origin "refs/heads/$target" | cut -f1)"
-          test "$recreated" = "$main_sha"
-          echo "RECREATED_PROMOTION_BRANCH=$target"
-          echo "PUBLIC_BASE=$main_sha"
+          if git ls-remote --exit-code origin "refs/heads/$target" >/dev/null 2>&1; then
+            echo PROMOTION_REF_DELETE_FAILED >&2
+            exit 66
+          fi
+          echo "CLEARED_PROMOTION_BRANCH=$target"
