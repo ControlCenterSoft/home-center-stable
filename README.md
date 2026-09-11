@@ -1,33 +1,23 @@
 # Home Center 0.49.0
 
-Home Center is a local-first control plane for managed home infrastructure. It
-provides authenticated administration, typed read-only infrastructure
-inventory, deterministic discovery and health aggregation, safe node
-maintenance planning, backup, resource and intent planning, module admission,
-and a bounded helper for local credential rotation. Version 0.15 supports
-validated deployment profiles containing one to 64 nodes while retaining the
-two-node, single-writer profile as a conservative deployment example.
+Home Center — local-first платформа управления домашней и малой серверной инфраструктурой. Она предоставляет аутентифицированное администрирование, типизированную read-only инвентаризацию, детерминированное обнаружение и агрегацию health, безопасное планирование обслуживания узлов, backup, resource/intent planning и module admission.
 
-## Release channels
+## Канал релизов
 
-This repository is the **stable channel**. Version `0.49.0` is the current
-qualified PUBLIC STABLE RELEASE.
+Этот репозиторий является официальным **stable-каналом**. Версия **0.49.0** — текущий квалифицированный PUBLIC STABLE RELEASE.
 
-The official canonical/source line is published separately in
-[`ControlCenterSoft/home-center-development`](https://github.com/ControlCenterSoft/home-center-development),
-where the latest officially published source release is also `0.49.0`.
+Release identity подтверждается опубликованным tag `v0.49.0`, release manifest, SHA256SUMS, SPDX SBOM и acceptance evidence. Возможности, добавленные после Stable 0.49.0, не считаются доступными пользователю, пока соответствующая stable-сборка отдельно не квалифицирована и не опубликована.
 
-Canonical source and public stable use separate release identities. The
-checked-in `APPROVED-SOURCE.json` records the approved canonical revision and
-its mapping into this hardened public stable tree; commit SHA equality between
-the two repositories is therefore not required.
+## Интерфейс 0.49
 
-Features added after stable `0.49.0` must not be treated as available in this
-stable channel until the corresponding stable package is separately qualified
-and published here.
+Версия 0.49.0 продолжает «Уютный» как аутентифицированное рабочее пространство и добавляет подтверждаемое добавление участников Household через «Семья» с ролями parent/child/guest. Flow основан на plan → review → explicit confirm, привязан к точному Household state и отклоняет stale/tampered proposal. Автоматическое создание OS/directory accounts в этот релиз не входит. «Уютный» и «Полный» остаются двумя интерфейсами одного продукта и используют общие RBAC, Audit, stale-state, post-condition и recovery boundaries.
 
-## Start here
+## Обновление
 
-Start with [INSTALL.md](INSTALL.md), then tailor the examples described in
-[CONFIGURATION.md](CONFIGURATION.md). Release identity and integrity files are
-described in [RELEASE.md](RELEASE.md).
+До отдельной публикации исправленного Stable-only updater используйте только явно выбранные артефакты из официального stable-канала и проверяйте release identity и SHA256SUMS. Подробнее — в [UPGRADE.md](UPGRADE.md).
+
+## С чего начать
+
+Начните с [INSTALL.md](INSTALL.md), затем адаптируйте примеры из [CONFIGURATION.md](CONFIGURATION.md). Release identity и integrity-файлы описаны в [RELEASE.md](RELEASE.md), порядок безопасного обновления — в [UPGRADE.md](UPGRADE.md).
+
+Публичная документация не должна содержать реальные deployment IP/host/domain/SID, credentials, private keys, production certificates, operator-specific overlays, сведения об исходной инфраструктуре или внутренних процессах разработки.
