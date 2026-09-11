@@ -1,8 +1,7 @@
-# Certificates
+# Сертификаты
 
-Provide separate browser-compatible Web identity and peer mutual-TLS identity.
-The Web certificate must match the configured hostname and management address;
-the peer certificate must match the node identity. Store keys outside the
-source and runtime archives with root-controlled permissions. Validate chains,
-names, algorithms, expiry, and key matching before activation, and keep the
-previous valid identity available for rollback.
+Используйте отдельную browser-compatible Web identity и отдельную mutual-TLS identity для peer-соединений.
+
+Web-сертификат должен соответствовать настроенному hostname и management address; peer-сертификат — identity соответствующего узла. Приватные ключи храните вне исходников и runtime-архивов с правами доступа под контролем root.
+
+Перед активацией проверяйте цепочку доверия, имена, алгоритмы, срок действия и соответствие ключа сертификату. Предыдущую действующую identity сохраняйте доступной для безопасного rollback.
