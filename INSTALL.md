@@ -1,12 +1,24 @@
-# Installation
+# Home Center 0.55.0 — установка
 
-Home Center 0.55.0 requires Linux, systemd, Python 3.12 or newer, SQLite, and
-operator-provided TLS identities. Verify `SHA256SUMS`, unpack the runtime, then
-run `sudo bash deploy/scripts/install.sh --config /path/to/config.json` to stage
-an immutable versioned directory. Add `--activate` only after reviewing the
-configuration, service units, certificate paths, and rollback prerequisites.
-The activation mode changes the `current` symlink atomically and restores the
-previous target if the services do not start successfully.
+Home Center 0.55.0 предназначен для Linux с systemd, Python 3.12 или новее и SQLite. TLS-идентичности и ключевой материал предоставляет и контролирует оператор.
 
-Never deploy the documentation values unchanged. Publication of a release does
-not authorize production activation.
+## Перед установкой
+
+1. Скачайте официальный архив `home-center-0.55.0-linux-amd64.tar.gz` из Public Stable release.
+2. Проверьте отдельный SHA-256 sidecar, `SHA256SUMS`, release manifest, acceptance record и SPDX SBOM. Несовпадение любого обязательного evidence является блокером установки.
+3. Подготовьте конфигурацию на основе примера, заменив все демонстрационные значения. Не используйте документационные адреса, имена узлов или сертификаты без адаптации.
+4. Убедитесь, что существуют актуальная резервная копия состояния/конфигурации и проверяемый rollback path.
+
+## Установка
+
+Выполните staging в отдельный неизменяемый каталог версии:
+
+```bash
+sudo bash deploy/scripts/install.sh --config /path/to/config.json
+```
+
+Параметр `--activate` добавляйте только после проверки конфигурации, unit-файлов, путей сертификатов, состояния backup и условий rollback. При активации указатель `current` переключается атомарно; если сервисы не запускаются успешно, установщик должен восстановить предыдущую цель.
+
+После запуска проверьте health/readiness, release identity и доступность требуемых сервисов. При чистой установке используется локальный `admin` с первоначальным паролем `admin`; при первом входе пароль необходимо изменить, до этого обычная работа должна быть запрещена.
+
+Публикация Stable-релиза сама по себе не является разрешением на production-активацию конкретного контура.
