@@ -1,11 +1,9 @@
-# Upgrade
+# Обновление
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+Перед каждым обновлением проверьте `SHA256SUMS`, встроенный `MANIFEST.sha256`, release identity, SPDX-документ, acceptance record и release manifest.
+
+Подготавливайте новую версию в отдельном каталоге и сохраняйте предыдущий неизменяемый каталог. Переключайте указатель `current` только после локальной проверки новой версии.
+
+В multi-node профиле обновляйте по одному узлу за раз, сохраняя минимально допустимое число Ready-узлов и роль single-writer там, где она применяется. Если обновление начинается со старой конфигурации Home Center 0.15 формата `home-center.config.v4`, runtime допускает её только как переходный single-peer формат; до добавления дополнительных peers переведите конфигурацию на `home-center.config.v5`.
+
+Для отката восстановите предыдущий указатель `current`, затем повторно проверьте health и release identity. Не выполняйте необратимые изменения persistent state без отдельно описанного migration/recovery пути.
