@@ -29,35 +29,35 @@ jobs:
           set -Eeuo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           gate = Path('tests/security_gate_public_release.py')
           text = gate.read_text(encoding='utf-8')
-          old = '''    expected_web = {"app.css", "app.js", "index.html", "member-change.css", "member-change.js", "planning.css", "planning.js", "release.js"}
-    require({path.name for path in (ROOT / "product/web/static").iterdir()} == expected_web, "public Web shape")'''
-          new = '''    legacy_web = {"app.css", "app.js", "index.html", "planning.css", "planning.js", "release.js"}
-    member_change_web = {"app.css", "app.js", "index.html", "member-change.css", "member-change.js", "planning.css", "planning.js", "release.js"}
-    web_shape = {path.name for path in (ROOT / "product/web/static").iterdir()}
-    require(web_shape in (legacy_web, member_change_web), "public Web shape")'''
-          if text.count(old) != 1:
+          old_expected = '    expected_web = {"app.css", "app.js", "index.html", "member-change.css", "member-change.js", "planning.css", "planning.js", "release.js"}'
+          new_expected = chr(10).join([
+              '    legacy_web = {"app.css", "app.js", "index.html", "planning.css", "planning.js", "release.js"}',
+              '    member_change_web = {"app.css", "app.js", "index.html", "member-change.css", "member-change.js", "planning.css", "planning.js", "release.js"}',
+              '    web_shape = {path.name for path in (ROOT / "product/web/static").iterdir()}',
+          ])
+          old_require = '    require({path.name for path in (ROOT / "product/web/static").iterdir()} == expected_web, "public Web shape")'
+          new_require = '    require(web_shape in (legacy_web, member_change_web), "public Web shape")'
+          if text.count(old_expected) != 1 or text.count(old_require) != 1:
               raise SystemExit('PUBLIC_WEB_GATE_IDENTITY_MISMATCH')
-          gate.write_text(text.replace(old, new, 1), encoding='utf-8')
+          gate.write_text(text.replace(old_expected, new_expected, 1).replace(old_require, new_require, 1), encoding='utf-8')
 
           workflow = Path('.github/workflows/promote-qualified-stable-v7.yml')
           text = workflow.read_text(encoding='utf-8')
-          old_if = """      github.ref_type == 'branch' &&
-      startsWith(github.ref_name, 'promote7/')"""
-          new_if = """      github.ref_type == 'branch' &&
-      (startsWith(github.ref_name, 'promote7/') ||
-       startsWith(github.ref_name, 'promote7-retry/'))"""
+          old_if = "      github.ref_type == 'branch' &&" + chr(10) + "      startsWith(github.ref_name, 'promote7/')"
+          new_if = "      github.ref_type == 'branch' &&" + chr(10) + "      (startsWith(github.ref_name, 'promote7/') ||" + chr(10) + "       startsWith(github.ref_name, 'promote7-retry/'))"
           if text.count(old_if) != 1:
               raise SystemExit('PROMOTION_TRIGGER_IDENTITY_MISMATCH')
           text = text.replace(old_if, new_if, 1)
           old_version = '          version="${GITHUB_REF_NAME#promote7/}"'
-          new_version = '''          case "$GITHUB_REF_NAME" in
-            promote7/*) version="${GITHUB_REF_NAME#promote7/}" ;;
-            promote7-retry/*) version="${GITHUB_REF_NAME#promote7-retry/}" ;;
-            *) fail PROMOTION_PREFIX_REJECTED ;;
-          esac'''
+          new_version = chr(10).join([
+              '          case "$GITHUB_REF_NAME" in',
+              '            promote7/*) version="${GITHUB_REF_NAME#promote7/}" ;;',
+              '            promote7-retry/*) version="${GITHUB_REF_NAME#promote7-retry/}" ;;',
+              '            *) fail PROMOTION_PREFIX_REJECTED ;;',
+              '          esac',
+          ])
           if text.count(old_version) != 1:
               raise SystemExit('PROMOTION_VERSION_IDENTITY_MISMATCH')
           workflow.write_text(text.replace(old_version, new_version, 1), encoding='utf-8')
@@ -89,9 +89,7 @@ jobs:
                       raise SystemExit(f'SPECIAL_SOURCE_FILE:{rel.as_posix()}')
                   records.append((rel.as_posix(), hashlib.sha256(path.read_bytes()).hexdigest()))
           records.sort(key=lambda item: item[0])
-          Path('SOURCE-MANIFEST.sha256').write_text(
-              ''.join(f'{digest}  {rel}\n' for rel, digest in records), encoding='ascii'
-          )
+          Path('SOURCE-MANIFEST.sha256').write_text(''.join(f'{digest}  {rel}\n' for rel, digest in records), encoding='ascii')
           PY
           python3 deploy/scripts/build-release.py verify-source --source-root .
 
