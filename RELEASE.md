@@ -1,30 +1,21 @@
-# Release 0.51.0
+# Выпуск Home Center 0.51.0
 
-The release set contains the Linux runtime archive, source archive, canonical
-SPDX 2.3 document, acceptance record, release manifest, and `SHA256SUMS`. Both
-archives contain `VERSION`, `REVISION`, and an internal `MANIFEST.sha256`.
-Verify the complete set before installation and require the published
-`v0.51.0` tag and release artifacts to agree with the release manifest.
+Текущая стабильная версия: **0.51.0**. Официальная публичная идентичность выпуска — tag `v0.51.0` и GitHub Release Home Center 0.51.0.
 
-This promotion incorporates the approved Home Center development source at
-canonical revision `980e9d84736b64a6e1558bae524e4da2a1c8115a` (`v0.51.0`).
-The checked-in `APPROVED-SOURCE.json` records that canonical revision, approved
-manifest digest `f82f1d80515fab27f320a69341e1cd137154faf6ad0281c2bd5349bd5c002958`,
-the stable release-boundary revision
-`c9a9c2ab5c5ccd76369409aed5d0b906bafb77b7`, and the per-file disposition
-(`identical`, `adapted`, or `excluded`).
+Комплект выпуска содержит Linux runtime archive, source archive, SPDX 2.3 SBOM, acceptance record, release manifest и `SHA256SUMS`. Архивы содержат `VERSION`, `REVISION` и внутренний `MANIFEST.sha256`.
 
-The published public `v0.51.0` annotated tag resolves to stable release commit
-`006cbf824c2a3a894a98d1619daadd0029c636b5`. This SHA intentionally differs
-from the canonical development SHA because the public stable tree applies the
-approved hardened/sanitized export mapping. Commit equality between canonical
-and public repositories is not a release requirement; the version, approved
-source mapping, manifests, checksums, SBOM and acceptance evidence are the
-authoritative link.
+Перед установкой или обновлением необходимо проверить:
 
-For subsequent stable releases, `VERSION` is the canonical publication
-identity. The release branch must be exactly `release/<VERSION>`, the annotated
-tag is `v<VERSION>`, and `VERSION`, Python package metadata, and the runtime
-version must agree. Publication is permitted only through the stable release
-procedure; current documentation updates do not mutate an already published
-tag or GitHub Release.
+- соответствие tag/version ожидаемой Stable-версии;
+- `SHA256SUMS` для загруженных файлов;
+- встроенный `MANIFEST.sha256`;
+- release manifest и acceptance evidence;
+- SPDX SBOM и применимые лицензионные/redistribution требования.
+
+Проверка целостности и release identity обязательна до активации. Публикация релиза не отменяет preflight, backup/recovery prerequisites, health checks и rollback/forward-recovery требования.
+
+## Ограничение автоматического обновления 0.51.0
+
+Опубликованный Stable 0.51.0 содержит `SHA256SUMS`, но не содержит отдельный asset `home-center-0.51.0-linux-amd64.tar.gz.sha256`, который текущий auto-updater требует дополнительно к GitHub asset digest. Поэтому автоматический updater обязан безопасно отклонить этот release set. До устранения расхождения не отключайте checksum-проверки и используйте контролируемое обновление по `UPGRADE.md`.
+
+Публичная продуктовая документация описывает только release identity, проверку целостности, установку, обновление, безопасность и эксплуатационные требования. Внутренние процессы разработки, внутренние репозитории/ветки, инфраструктура сборки, секреты и внутренние адреса в пользовательскую документацию не входят.
