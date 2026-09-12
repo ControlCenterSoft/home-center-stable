@@ -1,12 +1,30 @@
-# Installation
+# Home Center 0.56.0 — установка
 
-Home Center 0.56.0 requires Linux, systemd, Python 3.12 or newer, SQLite, and
-operator-provided TLS identities. Verify `SHA256SUMS`, unpack the runtime, then
-run `sudo bash deploy/scripts/install.sh --config /path/to/config.json` to stage
-an immutable versioned directory. Add `--activate` only after reviewing the
-configuration, service units, certificate paths, and rollback prerequisites.
-The activation mode changes the `current` symlink atomically and restores the
-previous target if the services do not start successfully.
+## Требования
 
-Never deploy the documentation values unchanged. Publication of a release does
-not authorize production activation.
+Для Home Center 0.56.0 требуется Linux с systemd, Python 3.12 или новее, локальное хранилище SQLite и подготовленные оператором TLS-сертификаты. Перед установкой проверьте доступность резервного копирования и возможность отката.
+
+## Проверка выпуска
+
+1. Используйте официальный выпуск `v0.56.0`.
+2. Для чистой установки скачайте `home-center-0.56.0-source.tar.gz` и `SHA256SUMS`.
+3. Проверьте SHA-256 до распаковки. После распаковки также проверьте release identity и внутренний `MANIFEST.sha256`, если он присутствует в пакете.
+4. Не используйте неподтверждённые сборки вместо Stable 0.56.0.
+
+## Чистая установка
+
+1. Распакуйте официальный source-архив в отдельный каталог.
+2. Подготовьте собственный файл конфигурации. Значения из примеров нельзя переносить в эксплуатацию без проверки.
+3. Проверьте пути к данным, backup, TLS, локальному администратору, сетевым адресам и peer-настройкам.
+4. Выполните штатную установку:
+
+   `sudo bash deploy/scripts/install.sh --config /path/to/config.json`
+
+5. До активации проверьте созданные каталоги версии, systemd units, конфигурацию, сертификаты и условия rollback.
+6. Используйте `--activate` только после этой проверки. Активация переключает `current` на новую версию атомарно и должна вернуть предыдущую цель, если сервисы не запускаются успешно.
+7. После запуска проверьте readiness/health и доступ к Web UI.
+8. При первой чистой установке войдите как `admin` / `admin` и обязательно смените пароль. До смены пароля обычная работа не должна разрешаться.
+
+## Важное ограничение 0.56.0
+
+Опубликованный runtime-архив `home-center-0.56.0-linux-amd64.tar.gz` предшествует исправлению формата, требуемого fail-closed node-updater. Он остаётся неизменным опубликованным артефактом и не должен принудительно подаваться в updater, ожидающий новый archive contract. Для чистой установки 0.56.0 используйте описанный выше source/install path. Исправленный runtime publication contract применяется к последующим квалифицированным Stable-выпускам.
