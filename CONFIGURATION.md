@@ -1,15 +1,20 @@
-# Configuration
+# Конфигурация Home Center
 
-Copy one of the files under `deploy/config` and replace every example value.
-The current configuration is closed by `home-center.config.v5` and defines
-cluster and node identity, management addresses, Web and peer ports, state and
-backup paths, local-administrator storage, optional directory authentication,
-TLS files, an external-access boundary, and zero to 63 explicit peer endpoints.
-The runtime also accepts the 0.14 `home-center.config.v4` single-peer shape for
-staged upgrades. Addresses in
-`192.0.2.0/24` and names below `example.invalid` are documentation values.
+Скопируйте подходящий шаблон из `deploy/config` и замените все демонстрационные значения до активации. Значения из документации, тестовые домены и адреса нельзя использовать как production-конфигурацию без явной проверки.
 
-The v1 profile under `deploy/profiles` is a two-node example. The v2 profile
-under `deploy/examples` demonstrates the portable one-to-64-node planning
-shape. Keep automatic failover disabled unless the deployment has an
-independently proven fencing design.
+Текущая основная схема конфигурации — `home-center.config.v5`. Она описывает:
+
+- identity кластера и узла;
+- management addresses, Web и peer ports;
+- пути state и backup;
+- локальное хранилище администратора;
+- дополнительную directory authentication, если она включена;
+- TLS certificate/key paths;
+- границу external access;
+- явные peer endpoints для multi-node профиля.
+
+Для обновления старых установок допускается только документированный transitional migration path. Legacy-конфигурацию необходимо привести к текущей схеме до расширения topology/peer set.
+
+Профили развёртывания являются примерами, а не готовой production-конфигурацией. Автоматический failover должен оставаться выключенным, пока для конкретного deployment не доказаны fencing, quorum и failure/recovery semantics.
+
+Секреты не помещайте непосредственно в публичные конфигурационные примеры или исходный код. Перед активацией проверьте TLS identities, state/backup paths, права файлов и возможность rollback.
