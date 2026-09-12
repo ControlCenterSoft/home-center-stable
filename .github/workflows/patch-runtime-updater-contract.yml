@@ -1,0 +1,187 @@
+name: Prepare updater-compatible runtime packaging fix
+
+on:
+  push:
+    branches:
+      - fix/runtime-updater-contract-20260912-b1
+
+permissions:
+  contents: write
+
+concurrency:
+  group: home-center-runtime-updater-contract-fix
+  cancel-in-progress: false
+
+jobs:
+  patch-and-qualify:
+    if: github.repository == 'ControlCenterSoft/home-center-stable'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact fix branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: ${{ github.sha }}
+
+      - name: Patch public runtime builder contract
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('deploy/scripts/build-release.py')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''RUNTIME_FILE_MAPPINGS = (
+              ("APPROVED-SOURCE.json", "APPROVED-SOURCE.json"),
+              ("deploy/runtime/run.py", "run.py"),
+              ("deploy/runtime/backup-run.py", "backup-run.py"),
+              ("deploy/runtime/provision-local-admin.py", "provision-local-admin.py"),
+              ("deploy/runtime/recover-local-admin.py", "recover-local-admin.py"),
+              ("deploy/scripts/install.sh", "deploy/scripts/install.sh"),
+              ("deploy/scripts/verify-artifact.sh", "deploy/scripts/verify-artifact.sh"),
+          )
+          '''
+          new = '''RUNTIME_FILE_MAPPINGS = (
+              ("APPROVED-SOURCE.json", "APPROVED-SOURCE.json"),
+              ("deploy/runtime/run.py", "run.py"),
+              ("deploy/runtime/backup-run.py", "backup-run.py"),
+              ("deploy/runtime/provision-local-admin.py", "provision-local-admin.py"),
+              ("deploy/runtime/recover-local-admin.py", "recover-local-admin.py"),
+              ("deploy/scripts/install.sh", "deploy/scripts/install.sh"),
+              ("deploy/scripts/verify-artifact.sh", "deploy/scripts/verify-artifact.sh"),
+              ("deploy/scripts/bootstrap-two-node.sh", "deploy/bootstrap-two-node.sh"),
+              ("deploy/scripts/install-node.sh", "deploy/install-node.sh"),
+              ("deploy/scripts/rollback-node.sh", "deploy/rollback-node.sh"),
+              ("deploy/systemd/home-center.service", "deploy/home-center.service"),
+              ("deploy/systemd/home-center-backup.service", "deploy/home-center-backup.service"),
+              ("deploy/systemd/home-center-backup.timer", "deploy/home-center-backup.timer"),
+          )
+          '''
+          if old not in text:
+              raise SystemExit('RUNTIME_FILE_MAPPINGS_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''        _write_text(runtime_root / "VERSION", VERSION + "\\n")
+                  _write_text(runtime_root / "REVISION", revision + "\\n")
+                  _content_manifest(runtime_root)
+          '''
+          new = '''        _write_text(runtime_root / "VERSION", VERSION + "\\n")
+                  _write_text(runtime_root / "REVISION", revision + "\\n")
+                  write_json(
+                      runtime_root / "DEPLOYMENT-ARTIFACT.json",
+                      {
+                          "revision": revision,
+                          "schema": "home-center.deployment-artifact.v1",
+                          "topology_bindings": "external",
+                          "version": VERSION,
+                      },
+                  )
+                  _content_manifest(runtime_root)
+          '''
+          if old not in text:
+              raise SystemExit('RUNTIME_METADATA_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''    _require(files.get("VERSION") == (VERSION + "\\n").encode("ascii"), "runtime_version_mismatch")
+              _require(files.get("REVISION") == (revision + "\\n").encode("ascii"), "runtime_revision_mismatch")
+              return files
+          '''
+          new = '''    _require(files.get("VERSION") == (VERSION + "\\n").encode("ascii"), "runtime_version_mismatch")
+              _require(files.get("REVISION") == (revision + "\\n").encode("ascii"), "runtime_revision_mismatch")
+              try:
+                  deployment = json.loads(files.get("DEPLOYMENT-ARTIFACT.json", b"").decode("utf-8"))
+              except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                  raise PublicReleaseError("runtime_deployment_metadata_invalid") from exc
+              _require(
+                  deployment
+                  == {
+                      "revision": revision,
+                      "schema": "home-center.deployment-artifact.v1",
+                      "topology_bindings": "external",
+                      "version": VERSION,
+                  },
+                  "runtime_deployment_metadata_mismatch",
+              )
+              for required in (
+                  "deploy/bootstrap-two-node.sh",
+                  "deploy/install-node.sh",
+                  "deploy/rollback-node.sh",
+                  "deploy/home-center.service",
+              ):
+                  _require(required in files, "runtime_updater_entry_missing")
+              return files
+          '''
+          if old not in text:
+              raise SystemExit('RUNTIME_VERIFY_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          python3 -m py_compile deploy/scripts/build-release.py
+
+      - name: Regenerate exact source manifest without helper workflow
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git rm .github/workflows/patch-runtime-updater-contract.yml
+          rm -f SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+
+          path = Path('deploy/scripts/build-release.py').resolve()
+          spec = importlib.util.spec_from_file_location('home_center_public_release', path)
+          if spec is None or spec.loader is None:
+              raise SystemExit('RELEASE_MODULE_LOAD_FAILED')
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.create_source_manifest(Path('.'))
+          PY
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+
+      - name: Commit deterministic fix
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'ControlCenterSoft'
+          git config user.email '40738562+ControlCenterSoft@users.noreply.github.com'
+          git add deploy/scripts/build-release.py SOURCE-MANIFEST.sha256
+          git diff --cached --check
+          git commit -m 'HC Stable: align public runtime artifact with updater contract'
+
+      - name: Qualify patched release builder before push
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          revision="$(git rev-parse HEAD)"
+          epoch="$(git show -s --format=%ct HEAD)"
+          candidate="$RUNNER_TEMP/home-center-runtime-contract-$revision"
+          GITHUB_SHA="$revision" python3 deploy/scripts/build-release.py candidate \
+            --source-root . \
+            --output "$candidate" \
+            --revision "$revision" \
+            --source-date-epoch "$epoch"
+          python3 deploy/scripts/build-release.py verify \
+            --directory "$candidate" \
+            --revision "$revision" \
+            --source-date-epoch "$epoch"
+          tar -tzf "$candidate/home-center-$(cat VERSION)-linux-amd64.tar.gz" > "$RUNNER_TEMP/runtime-files.txt"
+          for required in \
+            ./DEPLOYMENT-ARTIFACT.json \
+            ./deploy/bootstrap-two-node.sh \
+            ./deploy/install-node.sh \
+            ./deploy/rollback-node.sh \
+            ./deploy/home-center.service; do
+            grep -Fxq "$required" "$RUNNER_TEMP/runtime-files.txt" || { echo "UPDATER_ENTRY_MISSING:$required" >&2; exit 66; }
+          done
+          PYTHONPATH=product/control-plane/src python3 -m unittest discover -v -s tests -p 'test_*.py'
+          echo 'HOME_CENTER_RUNTIME_UPDATER_CONTRACT=PASS'
+
+      - name: Push qualified fix branch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git push origin "HEAD:${GITHUB_REF_NAME}"
