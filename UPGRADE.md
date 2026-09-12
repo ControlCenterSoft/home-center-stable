@@ -1,11 +1,31 @@
-# Upgrade
+# Обновление Home Center и rollback
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+Перед каждым обновлением подтвердите текущую версию, health всех узлов, состояние peer/replication, наличие проверяемой резервной копии и доступность предыдущего immutable release-каталога.
+
+## Проверка нового выпуска
+
+Для 0.56.0 обязательно проверьте:
+
+- tag/release `v0.56.0`;
+- Linux runtime archive;
+- отдельный `home-center-0.56.0-linux-amd64.tar.gz.sha256`;
+- `SHA256SUMS`;
+- встроенный `MANIFEST.sha256` после распаковки;
+- release manifest, acceptance record и SPDX SBOM.
+
+При несовпадении identity или контрольной суммы обновление прекращается fail-closed.
+
+## Последовательность обновления
+
+1. Зафиксируйте текущую версию, конфигурацию и health; создайте проверяемую резервную копию состояния и конфигурации.
+2. Разверните новую версию в отдельный versioned-каталог, не удаляя предыдущий.
+3. Выполните локальную проверку конфигурации, TLS, release identity и совместимости.
+4. В multi-node профиле обновляйте **только один узел за раз**, сохраняя минимально необходимое число готовых узлов и single-writer semantics там, где они применимы.
+5. После каждого узла проверьте сервисы, health, peer/replication state, Audit и отсутствие version/config drift. При проблеме следующий узел не обновляется до безопасного восстановления.
+6. Обновление не должно сбрасывать пользовательские данные, настройки или установленный пользователем пароль локального администратора.
+
+## Rollback / forward-recovery
+
+Если новая версия не проходит post-update checks, остановите дальнейший rollout. Верните `current` на предыдущий проверенный immutable release-каталог и повторно проверьте health, release identity, peer/replication и сервисы. Если обновление изменило state таким образом, что простой возврат бинарного каталога небезопасен, используйте документированный forward-recovery/restore path вместо неподтверждённого downgrade.
+
+Legacy-конфигурации допускаются только в пределах явно поддерживаемого migration path. Перед расширением multi-node профиля конфигурация должна быть приведена к текущей схеме.
