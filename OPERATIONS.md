@@ -1,10 +1,11 @@
-# Operations
+# Эксплуатация Home Center
 
-Monitor the authenticated health, typed infrastructure inventory, TLS, backup,
-and audit views. Treat inventory identity inconsistencies as unavailable state;
-the API intentionally does not expose rejected persisted facts.
-Keep two independently verified backups and test restore regularly. Use the
-backup timer for scheduled copies. Local-administrator provisioning and
-recovery entrypoints require a local root-controlled console. Treat degraded
-peer health, incomplete release identity, audit-chain failure, and malformed
-configuration as blocking conditions.
+Регулярно контролируйте аутентифицированный health, типизированную инвентаризацию инфраструктуры, состояние TLS, резервных копий и Audit. Несогласованность идентичности или непроверенные данные должны трактоваться как недоступное/неподтверждённое состояние, а не как Healthy.
+
+Храните как минимум две независимые проверенные резервные копии критичных данных и регулярно выполняйте тестовое восстановление. Плановое создание backup не заменяет restore-проверку.
+
+Локальное восстановление административного доступа и другие привилегированные recovery-действия выполняйте только через защищённый локальный/консольный путь, контролируемый root. Не передавайте секреты через журналы, issue, support-переписку или открытые конфигурационные файлы.
+
+Считайте блокирующими состояниями: деградацию peer health, неполную release identity, нарушение целостности Audit, невалидную конфигурацию, проблемы TLS, отсутствие обязательного backup/recovery prerequisite и расхождение версии/артефактов.
+
+При обновлении multi-node профиля меняйте узлы последовательно и проверяйте health, связность и согласованность после каждого шага. При неуспехе остановите дальнейшие изменения и используйте предусмотренный rollback/recovery-путь.
