@@ -1,11 +1,27 @@
-# Upgrade
+# Home Center 0.56.0 — обновление и откат
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+Обновление выполняется только на официальный квалифицированный Stable-релиз. Перед изменениями проверьте версию, целостность артефактов, резервную копию и возможность отката.
+
+## Перед обновлением
+
+1. Зафиксируйте текущую версию и состояние сервисов.
+2. Создайте проверяемую резервную копию состояния, конфигурации и необходимых пользовательских данных.
+3. Скачайте официальный runtime-архив новой Stable-версии и отдельный файл `.sha256`.
+4. Проверьте SHA-256, `SHA256SUMS`, release identity, SPDX SBOM, acceptance record и release manifest.
+5. Распакуйте новую версию в отдельный неизменяемый каталог; предыдущий каталог не удаляйте до завершения проверки.
+
+## Multi-node / двухузловой профиль
+
+Обновляйте узлы последовательно, сохраняя минимально допустимое число готовых узлов и single-writer роль там, где она используется. Для штатного двухузлового тестового профиля сначала обновляется второй узел, затем после проверки health, межузловой связности, репликации/согласованности состояния и сервисов — первый узел. Если первый обновляемый узел не прошёл проверки, переходить к следующему нельзя.
+
+Автоматический failover разрешается только для профиля, где он отдельно поддержан и подтверждён fencing/recovery-процедурой.
+
+## Проверки после каждого узла
+
+Проверьте запуск сервисов, release identity, TLS, доступность Web-интерфейса, peer health, backup readiness и отсутствие критических ошибок. Не считайте обновление успешным только по факту запуска процесса.
+
+## Откат
+
+Если новая версия не проходит обязательные проверки, прекратите дальнейшее обновление. Верните указатель `current` на предыдущий проверенный каталог или используйте предусмотренный recovery-путь, затем повторно проверьте сервисы, health и release identity. При несовместимом изменении данных используйте восстановление из резервной копии согласно документации конкретного выпуска; не выполняйте неподтверждённый ручной downgrade хранилища.
+
+Обновление не должно сбрасывать пользовательские настройки, данные и установленный административный пароль.
