@@ -1,33 +1,11 @@
-# Home Center 0.56.0
+# Home Center 0.56.0 Stable
 
-Home Center is a local-first control plane for managed home infrastructure. It
-provides authenticated administration, typed read-only infrastructure
-inventory, deterministic discovery and health aggregation, safe node
-maintenance planning, backup, resource and intent planning, module admission,
-and a bounded helper for local credential rotation. Version 0.15 supports
-validated deployment profiles containing one to 64 nodes while retaining the
-two-node, single-writer profile as a conservative deployment example.
+Home Center — локальная платформа управления домашней инфраструктурой с приоритетом безопасности, сохранности данных и понятного пользовательского управления.
 
-## Release channels
+**Текущая публичная стабильная версия: 0.56.0.** Этот репозиторий является официальным публичным Stable-каналом Home Center. Функции, отсутствующие в опубликованном выпуске 0.56.0, не следует считать доступными до выхода следующего квалифицированного Stable-релиза.
 
-This repository is the **stable channel**. Version `0.56.0` is the current
-qualified PUBLIC STABLE RELEASE.
+Home Center поддерживает аутентифицированное администрирование, типизированную инвентаризацию инфраструктуры только для чтения, агрегирование состояния, безопасное планирование обслуживания узлов, резервное копирование, планирование ресурсов и намерений, а также контролируемое подключение модулей. Неизвестное, непроверенное или противоречивое состояние не должно отображаться как исправное.
 
-The official canonical/source line is published separately in
-[`ControlCenterSoft/home-center-development`](https://github.com/ControlCenterSoft/home-center-development),
-where the latest officially published source release is also `0.56.0`.
+После чистой установки используется локальная административная учётная запись согласно опубликованной инструкции. Секреты, ключи TLS и пользовательские данные не должны храниться в репозитории или в открытых файлах конфигурации.
 
-Canonical source and public stable use separate release identities. The
-checked-in `APPROVED-SOURCE.json` records the approved canonical revision and
-its mapping into this hardened public stable tree; commit SHA equality between
-the two repositories is therefore not required.
-
-Features added after stable `0.56.0` must not be treated as available in this
-stable channel until the corresponding stable package is separately qualified
-and published here.
-
-## Start here
-
-Start with [INSTALL.md](INSTALL.md), then tailor the examples described in
-[CONFIGURATION.md](CONFIGURATION.md). Release identity and integrity files are
-described in [RELEASE.md](RELEASE.md).
+Начните с [INSTALL.md](INSTALL.md), затем настройте параметры по [CONFIGURATION.md](CONFIGURATION.md). Обновление и откат описаны в [UPGRADE.md](UPGRADE.md), эксплуатация — в [OPERATIONS.md](OPERATIONS.md), безопасность — в [SECURITY.md](SECURITY.md), проверка релиза — в [RELEASE.md](RELEASE.md).
