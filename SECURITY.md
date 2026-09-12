@@ -1,7 +1,13 @@
-# Security
+# Безопасность
 
-Keep credentials and key material outside source control. Use least privilege,
-root-controlled configuration and secret files, TLS for all network listeners,
-and the fixed-action helper boundary. Report a vulnerability to the repository
-owner through a confidential channel and do not place sensitive detail in a
-public issue.
+- Не храните пароли, токены, закрытые ключи и другие секреты в исходном коде, release-архивах или обычных журналах.
+- Используйте принцип минимальных привилегий, root-controlled конфигурацию и отдельные secret-файлы.
+- Для всех сетевых listener используйте TLS; peer-соединения должны использовать взаимную аутентификацию там, где это предусмотрено профилем.
+- Привилегированные действия выполняются только через типизированные разрешённые операции; произвольный shell не является публичным административным API.
+- Не трактуйте stale, malformed, unverifiable или incomplete evidence как успешное/здоровое состояние.
+- Перед рискованными изменениями должны быть определены preflight, проверяемый результат и rollback/forward-recovery path.
+- Внешняя публикация сервисов не включается неявно и требует отдельного явного разрешения.
+
+После чистой установки локальный `admin` использует первоначальный пароль `admin`. Первый вход обязан потребовать смену пароля; до смены обычная работа запрещена. Обновление не сбрасывает установленный пользователем пароль.
+
+Сообщения об уязвимостях передавайте владельцу продукта через конфиденциальный канал. Не публикуйте чувствительные детали в публичных issue.
