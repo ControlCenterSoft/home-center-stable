@@ -1,30 +1,19 @@
-# Release 0.56.0
+# Home Center 0.56.0 — состав выпуска и проверка целостности
 
-The release set contains the Linux runtime archive, source archive, canonical
-SPDX 2.3 document, acceptance record, release manifest, and `SHA256SUMS`. Both
-archives contain `VERSION`, `REVISION`, and an internal `MANIFEST.sha256`.
-Verify the complete set before installation and require the published
-`v0.56.0` tag and release artifacts to agree with the release manifest.
+Официальная публикационная identity выпуска:
 
-This promotion incorporates the approved Home Center development source at
-canonical revision `980e9d84736b64a6e1558bae524e4da2a1c8115a` (`v0.56.0`).
-The checked-in `APPROVED-SOURCE.json` records that canonical revision, approved
-manifest digest `f82f1d80515fab27f320a69341e1cd137154faf6ad0281c2bd5349bd5c002958`,
-the stable release-boundary revision
-`c9a9c2ab5c5ccd76369409aed5d0b906bafb77b7`, and the per-file disposition
-(`identical`, `adapted`, or `excluded`).
+- версия: `0.56.0`;
+- tag: `v0.56.0`;
+- канал: публичный Stable;
+- Linux runtime archive и source archive;
+- отдельный SHA-256 sidecar для Linux runtime archive;
+- `SHA256SUMS`;
+- release manifest;
+- acceptance record;
+- SPDX 2.3 SBOM.
 
-The published public `v0.56.0` annotated tag resolves to stable release commit
-`006cbf824c2a3a894a98d1619daadd0029c636b5`. This SHA intentionally differs
-from the canonical development SHA because the public stable tree applies the
-approved hardened/sanitized export mapping. Commit equality between canonical
-and public repositories is not a release requirement; the version, approved
-source mapping, manifests, checksums, SBOM and acceptance evidence are the
-authoritative link.
+Оба архива должны содержать согласованные `VERSION`, `REVISION` и внутренний `MANIFEST.sha256`. Перед установкой необходимо проверить опубликованные контрольные суммы, внутренний manifest и согласованность версии/tag/release manifest.
 
-For subsequent stable releases, `VERSION` is the canonical publication
-identity. The release branch must be exactly `release/<VERSION>`, the annotated
-tag is `v<VERSION>`, and `VERSION`, Python package metadata, and the runtime
-version must agree. Publication is permitted only through the stable release
-procedure; current documentation updates do not mutate an already published
-tag or GitHub Release.
+Выпуск 0.56.0 добавляет confirmation-gated явный выбор провайдера управления устройством с повторной проверкой актуального Household/device/provider state. Подтверждение фиксирует только выбор. Оно не предоставляет execution authority, credential access, enrollment authority, policy application authority, право изменения managed state, инфраструктурных изменений или внешней публикации.
+
+Для последующих Stable-релизов `VERSION` является публикационной версией продукта, tag имеет форму `v<VERSION>`, а runtime/package metadata обязаны согласовываться с этой версией. Уже опубликованный tag/release не изменяется документационными обновлениями; новый состав продукта публикуется отдельным квалифицированным релизом.
