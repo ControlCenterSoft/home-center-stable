@@ -1,12 +1,26 @@
-# Installation
+# Home Center 0.56.0 — установка
 
-Home Center 0.56.0 requires Linux, systemd, Python 3.12 or newer, SQLite, and
-operator-provided TLS identities. Verify `SHA256SUMS`, unpack the runtime, then
-run `sudo bash deploy/scripts/install.sh --config /path/to/config.json` to stage
-an immutable versioned directory. Add `--activate` only after reviewing the
-configuration, service units, certificate paths, and rollback prerequisites.
-The activation mode changes the `current` symlink atomically and restores the
-previous target if the services do not start successfully.
+## Требования
 
-Never deploy the documentation values unchanged. Publication of a release does
-not authorize production activation.
+Поддерживаемая база выпуска: Linux с systemd, Python 3.12 или новее, SQLite и предоставленные оператором TLS-сертификаты. Закрытые ключи и другие секреты должны храниться вне исходного кода и release-архивов с правами, доступными только уполномоченной системной учётной записи.
+
+## Проверка выпуска
+
+1. Используйте официальный Stable release `v0.56.0`.
+2. Скачайте Linux runtime archive и опубликованный рядом файл `home-center-0.56.0-linux-amd64.tar.gz.sha256`.
+3. Сверьте архив с отдельным SHA-256 sidecar и с `SHA256SUMS`.
+4. Перед активацией проверьте release manifest, acceptance record и SPDX SBOM из опубликованного release set.
+
+Не устанавливайте архив, если хотя бы одна проверка целостности или release identity не проходит.
+
+## Установка
+
+1. Подготовьте конфигурацию по [CONFIGURATION.md](CONFIGURATION.md); не используйте демонстрационные значения без замены.
+2. Выполните staging без активации:
+   `sudo bash deploy/scripts/install.sh --config /path/to/config.json`
+3. Проверьте созданный versioned-каталог, systemd units, пути сертификатов, state/backup directories и rollback prerequisites.
+4. Только после успешного preflight повторите штатную установку с `--activate`. Активация атомарно переключает `current`; если сервисы не запускаются, штатный install path должен вернуть предыдущую цель.
+5. Проверьте health, Web-доступ, peer state для multi-node профиля, release identity и Audit.
+6. При чистой установке войдите как `admin` / `admin` и обязательно смените пароль. До смены первоначального пароля обычная работа с системой не должна быть доступна.
+
+Публикация Stable-релиза не означает автоматического разрешения production activation: перед изменением рабочей системы должны быть подтверждены backup/recovery, совместимость конфигурации и безопасный rollback path.
