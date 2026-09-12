@@ -1,8 +1,11 @@
-# Certificates
+# Сертификаты Home Center
 
-Provide separate browser-compatible Web identity and peer mutual-TLS identity.
-The Web certificate must match the configured hostname and management address;
-the peer certificate must match the node identity. Store keys outside the
-source and runtime archives with root-controlled permissions. Validate chains,
-names, algorithms, expiry, and key matching before activation, and keep the
-previous valid identity available for rollback.
+Используйте отдельные TLS identities для Web-доступа и взаимной аутентификации peer-соединений.
+
+- Web-сертификат должен соответствовать настроенному hostname и адресу управления.
+- Peer-сертификат должен соответствовать identity узла.
+- Закрытые ключи хранятся вне исходного кода и runtime/release архивов с root-controlled permissions.
+- До активации проверяйте цепочку доверия, имена, допустимые алгоритмы, срок действия и соответствие закрытого ключа сертификату.
+- Предыдущая рабочая identity должна сохраняться до завершения post-change verification, чтобы оставался безопасный rollback path.
+
+Истёкший, неподходящий или непроверяемый сертификат является блокирующим состоянием; отключать TLS-проверку для обхода ошибки нельзя.
