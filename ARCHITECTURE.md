@@ -1,13 +1,17 @@
-# Architecture
+# Архитектура Home Center
 
-Home Center has a Python control plane, a static Web interface, a local SQLite
-state store, and closed JSON contracts. The runtime exposes separate Web and
-mutually authenticated peer listeners. Planning components return typed,
-non-executing plans. A root service exposes only fixed helper actions over a
-local Unix socket; callers cannot supply executable paths or shell commands.
+Home Center состоит из локального control plane на Python, статического Web-интерфейса, локального хранилища состояния SQLite и закрытых JSON-контрактов.
 
-Peer reconciliation is collection-based and deployment profiles support one to
-64 nodes. The supplied two-node topology remains single-writer. Health,
-infrastructure inventory, backup, audit, module admission, resource snapshots,
-and release identity remain explicit subsystems with fail-closed input
-validation.
+## Границы безопасности
+
+Административный Web-контур и межузловое взаимодействие разделены. Для сетевых соединений используются TLS-идентичности согласно deployment-профилю. Привилегированные системные действия доступны только через фиксированный набор типизированных операций; передача произвольного executable path или shell-команды не является допустимым пользовательским механизмом.
+
+Компоненты планирования формируют типизированный план и сами по себе не дают полномочий на выполнение. Неизвестное или противоречивое фактическое состояние обрабатывается fail-closed.
+
+## Узлы и роли
+
+Поддерживается профиль от одного до нескольких узлов в пределах опубликованной конфигурационной модели. Двухузловой профиль сохраняет консервативную single-writer семантику там, где она требуется. Наличие нескольких узлов само по себе не означает подтверждённый автоматический failover: он допускается только при наличии проверенного fencing/recovery-профиля.
+
+## Основные подсистемы
+
+Отдельными эксплуатационными подсистемами являются health, инвентаризация инфраструктуры, backup/recovery, Audit, управление модулями, ресурсные снимки, конфигурация и release identity. Для stateful-данных резервное копирование считается достаточным только при наличии проверяемого restore-пути.
