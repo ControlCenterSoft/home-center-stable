@@ -1,33 +1,15 @@
-# Home Center 0.56.0
+# Home Center 0.56.0 Stable
 
-Home Center is a local-first control plane for managed home infrastructure. It
-provides authenticated administration, typed read-only infrastructure
-inventory, deterministic discovery and health aggregation, safe node
-maintenance planning, backup, resource and intent planning, module admission,
-and a bounded helper for local credential rotation. Version 0.15 supports
-validated deployment profiles containing one to 64 nodes while retaining the
-two-node, single-writer profile as a conservative deployment example.
+Home Center — самостоятельная local-first платформа управления домашней инфраструктурой. Этот репозиторий является официальным публичным Stable-каналом продукта.
 
-## Release channels
+**Текущая стабильная версия: 0.56.0.**
 
-This repository is the **stable channel**. Version `0.56.0` is the current
-qualified PUBLIC STABLE RELEASE.
+В 0.56.0 опубликован безопасный явный выбор способа управления устройством: выбранный provider повторно проверяется на готовность и совместимость, а подтверждение выбора само по себе не запускает enrollment, не передаёт учётные данные, не меняет состояние устройства на managed и не разрешает инфраструктурные изменения или внешнюю публикацию.
 
-The official canonical/source line is published separately in
-[`ControlCenterSoft/home-center-development`](https://github.com/ControlCenterSoft/home-center-development),
-where the latest officially published source release is also `0.56.0`.
+После чистой установки используется локальный пользователь `admin` с первоначальным паролем `admin`. При первом входе пароль необходимо сменить; до смены обычная работа запрещена. Обновление не сбрасывает установленный пользователем пароль.
 
-Canonical source and public stable use separate release identities. The
-checked-in `APPROVED-SOURCE.json` records the approved canonical revision and
-its mapping into this hardened public stable tree; commit SHA equality between
-the two repositories is therefore not required.
+Home Center поддерживает single-node как полноценный режим. Multi-node/HA используется только в тех сценариях, для которых подтверждены соответствующие health/recovery условия. Неизвестное, stale или неподтверждённое состояние не должно отображаться как Healthy.
 
-Features added after stable `0.56.0` must not be treated as available in this
-stable channel until the corresponding stable package is separately qualified
-and published here.
+Начните с [инструкции по установке](INSTALL.md), затем проверьте [конфигурацию](CONFIGURATION.md) и [порядок обновления](UPGRADE.md). Состав и проверка текущего выпуска описаны в [RELEASE.md](RELEASE.md), требования безопасности — в [SECURITY.md](SECURITY.md).
 
-## Start here
-
-Start with [INSTALL.md](INSTALL.md), then tailor the examples described in
-[CONFIGURATION.md](CONFIGURATION.md). Release identity and integrity files are
-described in [RELEASE.md](RELEASE.md).
+Функции, появившиеся после 0.56.0, не считаются доступными в Stable до отдельной квалификации и публикации соответствующего стабильного выпуска.
