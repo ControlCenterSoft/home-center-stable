@@ -1,12 +1,33 @@
-# Installation
+# Home Center 0.56.0 — установка
 
-Home Center 0.56.0 requires Linux, systemd, Python 3.12 or newer, SQLite, and
-operator-provided TLS identities. Verify `SHA256SUMS`, unpack the runtime, then
-run `sudo bash deploy/scripts/install.sh --config /path/to/config.json` to stage
-an immutable versioned directory. Add `--activate` only after reviewing the
-configuration, service units, certificate paths, and rollback prerequisites.
-The activation mode changes the `current` symlink atomically and restores the
-previous target if the services do not start successfully.
+Home Center 0.56.0 предназначен для Linux с systemd, Python 3.12 или новее и SQLite. Для сетевых интерфейсов управления необходимо использовать корректные TLS-сертификаты и закрытые ключи, предоставленные администратором.
 
-Never deploy the documentation values unchanged. Publication of a release does
-not authorize production activation.
+## Перед установкой
+
+1. Скачайте официальный runtime-архив `home-center-0.56.0-linux-amd64.tar.gz` и файл `home-center-0.56.0-linux-amd64.tar.gz.sha256` из публичного Stable-релиза 0.56.0.
+2. Проверьте SHA-256. При несовпадении установка должна быть остановлена.
+3. Подготовьте отдельные TLS-идентичности для Web-доступа и межузлового взаимодействия, если используется multi-node профиль.
+4. Проверьте свободное место, синхронизацию времени, DNS и наличие резервного административного доступа к серверу.
+5. Для существующей установки предварительно создайте проверяемую резервную копию состояния и конфигурации.
+
+## Установка
+
+Распакуйте выпуск в отдельный версионированный каталог и используйте штатный установочный сценарий:
+
+```bash
+sudo bash deploy/scripts/install.sh --config /path/to/config.json
+```
+
+Сначала выполняйте установку без активации. Проверьте конфигурацию, systemd units, пути сертификатов, права на секреты и условия отката. Параметр `--activate` используйте только после успешной проверки:
+
+```bash
+sudo bash deploy/scripts/install.sh --config /path/to/config.json --activate
+```
+
+Активация атомарно переключает указатель текущей версии; если сервисы не запускаются успешно, штатный путь должен вернуть предыдущую активную версию.
+
+## После установки
+
+Проверьте состояние сервисов, Web-доступ по HTTPS, release identity, backup readiness и отсутствие критических ошибок. Не публикуйте административные интерфейсы наружу без предусмотренного защищённого контура.
+
+Примеры в документации являются шаблонами. Не используйте демонстрационные адреса, имена, пути, пароли или ключи без адаптации к своей среде.
