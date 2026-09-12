@@ -1,11 +1,25 @@
-# Upgrade
+# Home Center — обновление и rollback
 
-For every upgrade, verify `SHA256SUMS`, the embedded `MANIFEST.sha256`, release
-identity, the SPDX document, acceptance record, and release manifest. Stage the
-new version in a new directory, retain the previous immutable directory, and
-change the current pointer only after local validation. Upgrade one node at a
-time while preserving the profile's minimum ready-node requirement and the
-single-writer role where applicable. Version 0.15 accepts the v4 single-peer
-configuration during migration; convert to v5 before adding more peers. Roll
-back by restoring the previous pointer and rechecking health and release
-identity.
+Перед любым обновлением проверьте текущую версию, health, состояние peer/replication применимых сервисов, наличие проверяемой резервной копии и доступность предыдущего неизменяемого каталога выпуска.
+
+## Общие правила
+
+1. Используйте только выпуск, предназначенный для выбранного канала и контура.
+2. До распаковки проверяйте `SHA256SUMS`, release identity, release manifest, acceptance evidence и SBOM текущего выпуска.
+3. Новую версию размещайте в отдельном каталоге; предыдущий каталог не изменяйте до завершения проверки.
+4. Переключайте `current` только после локальной валидации конфигурации, TLS, данных и rollback prerequisites.
+5. После обновления обязательно проверяйте readiness/health, пользовательское состояние и сохранность установленного пароля администратора.
+
+## Multi-node
+
+Обновляйте кластер последовательно по одному узлу. После каждого узла проверьте health, peer/replication и сервисы и только затем переходите к следующему. Не продолжайте rollout при degraded/unknown состоянии или если минимально допустимое число готовых узлов не подтверждено.
+
+Для двухузлового контура сначала обновляется выбранный standby/вторичный узел, затем — второй узел после успешной проверки первого. Single-writer роль должна сохраняться там, где она предусмотрена профилем.
+
+## Rollback
+
+При неуспешном обновлении остановите дальнейший rollout, верните `current` на предыдущий проверенный каталог и повторно проверьте release identity, health и состояние данных. Если изменение затронуло stateful данные, используйте только предусмотренную для этой версии процедуру recovery/restore; не объявляйте rollback успешным только по факту запуска сервиса.
+
+## Ограничение Stable 0.56.0
+
+Runtime-архив `home-center-0.56.0-linux-amd64.tar.gz` опубликован до исправления archive contract для fail-closed node-updater. Не обходите эту проверку и не принуждайте updater принять несовместимую форму архива. Для 0.56.0 используйте поддерживаемый install/upgrade путь из [INSTALL.md](INSTALL.md); исправленный runtime publication contract относится к последующим квалифицированным Stable-выпускам.
