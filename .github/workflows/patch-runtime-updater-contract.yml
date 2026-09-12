@@ -65,9 +65,87 @@ jobs:
               raise SystemExit('RUNTIME_FILE_MAPPINGS_PATCH_POINT_MISSING')
           text = text.replace(old, new, 1)
 
+          old = '''def _archive(root: Path, target: Path, epoch: int, prefix: str | None = None) -> None:
+          '''
+          new = '''def _archive(
+              root: Path,
+              target: Path,
+              epoch: int,
+              prefix: str | None = None,
+              *,
+              dot_prefix: bool = False,
+          ) -> None:
+          '''
+          if old not in text:
+              raise SystemExit('ARCHIVE_SIGNATURE_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''                        name = f"{prefix}/{relative}" if prefix else relative
+                                  _safe_relative(name, "archive_path_rejected")
+                                  payload = path.read_bytes()
+                                  member = tarfile.TarInfo(name)
+          '''
+          new = '''                        name = f"{prefix}/{relative}" if prefix else relative
+                                  _safe_relative(name, "archive_path_rejected")
+                                  archive_name = f"./{name}" if dot_prefix else name
+                                  payload = path.read_bytes()
+                                  member = tarfile.TarInfo(archive_name)
+          '''
+          if old not in text:
+              raise SystemExit('ARCHIVE_NAME_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''def _archive_files(path: Path) -> tuple[dict[str, bytes], int]:
+          '''
+          new = '''def _archive_files(path: Path, *, require_dot_prefix: bool = False) -> tuple[dict[str, bytes], int]:
+          '''
+          if old not in text:
+              raise SystemExit('ARCHIVE_FILES_SIGNATURE_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''            for member in members:
+                          _safe_relative(member.name, "archive_member_path_rejected")
+                          _require(member.isfile() and not member.issym() and not member.islnk(), "archive_member_type_rejected")
+                          _require(member.name not in result, "archive_duplicate_member")
+          '''
+          new = '''            for member in members:
+                          archive_name = member.name
+                          if require_dot_prefix:
+                              _require(archive_name.startswith("./"), "archive_dot_prefix_required")
+                              name = archive_name[2:]
+                          else:
+                              name = archive_name
+                          _safe_relative(name, "archive_member_path_rejected")
+                          _require(member.isfile() and not member.issym() and not member.islnk(), "archive_member_type_rejected")
+                          _require(name not in result, "archive_duplicate_member")
+          '''
+          if old not in text:
+              raise SystemExit('ARCHIVE_MEMBER_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''                result[member.name] = payload
+          '''
+          new = '''                result[name] = payload
+          '''
+          if old not in text:
+              raise SystemExit('ARCHIVE_RESULT_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
+          old = '''    files, actual_epoch = _archive_files(path)
+              _require(actual_epoch == epoch, "runtime_epoch_mismatch")
+          '''
+          new = '''    files, actual_epoch = _archive_files(path, require_dot_prefix=True)
+              _require(actual_epoch == epoch, "runtime_epoch_mismatch")
+          '''
+          if old not in text:
+              raise SystemExit('RUNTIME_ARCHIVE_READ_PATCH_POINT_MISSING')
+          text = text.replace(old, new, 1)
+
           old = '''        _write_text(runtime_root / "VERSION", VERSION + "\\n")
                   _write_text(runtime_root / "REVISION", revision + "\\n")
                   _content_manifest(runtime_root)
+                  runtime_path = output_root / RUNTIME_ARCHIVE
+                  _archive(runtime_root, runtime_path, epoch)
           '''
           new = '''        _write_text(runtime_root / "VERSION", VERSION + "\\n")
                   _write_text(runtime_root / "REVISION", revision + "\\n")
@@ -81,6 +159,8 @@ jobs:
                       },
                   )
                   _content_manifest(runtime_root)
+                  runtime_path = output_root / RUNTIME_ARCHIVE
+                  _archive(runtime_root, runtime_path, epoch, dot_prefix=True)
           '''
           if old not in text:
               raise SystemExit('RUNTIME_METADATA_PATCH_POINT_MISSING')
