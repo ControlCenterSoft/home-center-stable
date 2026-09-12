@@ -1,10 +1,19 @@
-# Operations
+# Эксплуатация Home Center
 
-Monitor the authenticated health, typed infrastructure inventory, TLS, backup,
-and audit views. Treat inventory identity inconsistencies as unavailable state;
-the API intentionally does not expose rejected persisted facts.
-Keep two independently verified backups and test restore regularly. Use the
-backup timer for scheduled copies. Local-administrator provisioning and
-recovery entrypoints require a local root-controlled console. Treat degraded
-peer health, incomplete release identity, audit-chain failure, and malformed
-configuration as blocking conditions.
+В эксплуатации контролируйте authenticated health, инфраструктурную инвентаризацию, TLS, резервное копирование, Audit и release identity. Несогласованность идентичности или неподтверждённые факты должны отображаться как unavailable/unknown, а не как Healthy.
+
+## Ежедневные правила
+
+- Проверяйте readiness/health и состояние критичных сервисов после перезапуска, обновления и изменения конфигурации.
+- Контролируйте peer/replication state для multi-node профилей; degraded или неизвестное состояние является поводом остановить рискованные операции.
+- Храните не менее двух независимо проверяемых резервных копий критичных данных и регулярно выполняйте restore drill.
+- Не считайте backup успешным доказательством восстановления без фактической проверки restore.
+- Проверяйте срок действия TLS-сертификатов и соответствие имён конфигурации.
+- Проверяйте release identity и целостность артефактов перед обновлением.
+- Local-admin recovery выполняйте только через предусмотренный локальный root-controlled контур; не переносите административные секреты в диагностику или Audit.
+
+## Блокирующие состояния
+
+Не продолжайте rollout или опасную операцию при degraded peer health, неполной release identity, нарушении Audit integrity, некорректной конфигурации, неподтверждённой резервной копии/rollback или неизвестном состоянии зависимости.
+
+False Success недопустим: успешный запуск команды или сервиса не заменяет post-condition verification фактического состояния.
