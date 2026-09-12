@@ -1,7 +1,9 @@
-# API
+# API Home Center
 
-The canonical API description is
-`contracts/openapi/home-center.v1.openapi.json`. Authentication, same-origin
-checks, typed request bodies, bounded input sizes, and closed response contracts
-apply to administrative endpoints. Infrastructure inventory is read-only, and
-planning endpoints do not authorize execution.
+Каноническое описание публичного API выпуска находится в `contracts/openapi/home-center.v1.openapi.json`.
+
+Для административных endpoints обязательны аутентификация и авторизация на стороне сервера, same-origin/CSRF-защита там, где она применима, типизированные тела запросов, ограничение размеров входных данных и закрытые response-контракты.
+
+Инвентаризация инфраструктуры является read-only. Planning endpoints возвращают план или рекомендацию и сами по себе не предоставляют полномочий на выполнение изменений.
+
+Клиент не должен считать запрос успешным только по HTTP-факту принятия: для рискованных операций конечный результат определяется подтверждённым фактическим состоянием, Audit/evidence и post-condition verification.
