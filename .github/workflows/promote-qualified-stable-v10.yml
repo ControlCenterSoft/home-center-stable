@@ -189,7 +189,6 @@ jobs:
               'promote-qualified-stable.yml','promote-qualified-stable-v2.yml','promote-qualified-stable-v3.yml',
               'promote-qualified-stable-v4.yml','promote-qualified-stable-v5.yml','promote-qualified-stable-v6.yml',
               'promote-qualified-stable-v7.yml','promote-qualified-stable-v8.yml','promote-qualified-stable-v9.yml',
-              'promote-qualified-stable-v10.yml',
           ):
               path = root / '.github/workflows' / wf
               if path.is_file():
@@ -268,6 +267,30 @@ jobs:
           PYTHONPATH=product/control-plane/src python3 -m unittest discover -v -s tests -p 'test_*.py'
           python3 tests/security_gate_public_release.py
           PYTHONPATH=product/control-plane/src python3 -c 'import home_center.actions, home_center.api, home_center.module_admission, home_center.server'
+
+      - name: Drop one-shot promotion tooling after self-qualification
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -f .github/workflows/promote-qualified-stable-v10.yml
+          rm -f tests/test_stable_promotion_v10_contract.py
+          rm -f SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, os
+          root = Path.cwd(); ignored = {'.git','__pycache__'}; forbidden = {'.hc-dev','.idea','.vscode','dist','docs','ops','secrets'}; records = []
+          for directory, names, files in os.walk(root, topdown=True, followlinks=False):
+              base = Path(directory); rel_dir = base.relative_to(root); names[:] = sorted(name for name in names if name not in ignored)
+              if set(rel_dir.parts) & forbidden: raise SystemExit(f'FORBIDDEN_SOURCE_DIRECTORY:{rel_dir.as_posix()}')
+              for name in sorted(files):
+                  path = base / name; rel = path.relative_to(root)
+                  if name == 'SOURCE-MANIFEST.sha256' or set(rel.parts) & ignored: continue
+                  if set(rel.parts) & forbidden: raise SystemExit(f'FORBIDDEN_SOURCE_PATH:{rel.as_posix()}')
+                  if path.is_symlink() or not path.is_file() or path.suffix in {'.pyc','.pyo'}: raise SystemExit(f'SPECIAL_SOURCE_FILE:{rel.as_posix()}')
+                  records.append((rel.as_posix(), hashlib.sha256(path.read_bytes()).hexdigest()))
+          records.sort(key=lambda item: item[0])
+          Path('SOURCE-MANIFEST.sha256').write_text(''.join(f'{digest}  {rel}\n' for rel,digest in records), encoding='ascii')
+          PY
 
       - name: Commit exact public candidate
         shell: bash
