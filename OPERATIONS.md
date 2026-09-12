@@ -1,10 +1,19 @@
-# Operations
+# Эксплуатация Home Center
 
-Monitor the authenticated health, typed infrastructure inventory, TLS, backup,
-and audit views. Treat inventory identity inconsistencies as unavailable state;
-the API intentionally does not expose rejected persisted facts.
-Keep two independently verified backups and test restore regularly. Use the
-backup timer for scheduled copies. Local-administrator provisioning and
-recovery entrypoints require a local root-controlled console. Treat degraded
-peer health, incomplete release identity, audit-chain failure, and malformed
-configuration as blocking conditions.
+Регулярно контролируйте authenticated health, инфраструктурную инвентаризацию, TLS, состояние backup/recovery, Audit и release identity. Несогласованность identity, устаревшее evidence или отклонённые persisted facts должны отображаться как unavailable/degraded, а не как Healthy.
+
+## Резервное копирование и recovery
+
+Храните как минимум две независимо проверенные резервные копии критичного состояния и регулярно выполняйте restore drill. Наличие backup-файла без проверяемого восстановления не считается достаточным подтверждением защиты данных. Плановые копии создавайте штатным backup timer и контролируйте их результат.
+
+## Локальный администратор
+
+Provisioning и recovery локального администратора выполняются только через защищённый локальный root-controlled контур. После чистой установки `admin/admin` используется только как bootstrap: первый вход обязан завершиться сменой пароля. При обновлении существующий пароль сохраняется.
+
+## Multi-node
+
+Обновляйте узлы последовательно. После каждого шага проверьте services, health, peer/replication, release identity и Audit. Degraded peer health, нарушение single-writer semantics, неполная release identity, ошибка Audit chain или некорректная конфигурация являются блокирующими условиями; следующий узел не обновляется до безопасного восстановления.
+
+## Изменения
+
+Рискованные операции выполняются только после preflight с понятным recovery path. Неподтверждённый результат не должен объявляться успешным. При невозможности безопасного rollback используйте предусмотренный forward-recovery/restore, а не произвольный downgrade.
