@@ -53,11 +53,14 @@ jobs:
           public_base="$(git rev-parse HEAD)"
           main_record="$(git ls-remote --exit-code origin refs/heads/main)" || fail MAIN_IDENTITY_CHECK_FAILED
           [[ "$main_record" == "$public_base"$'\trefs/heads/main' ]] || fail PROMOTION_NOT_CREATED_FROM_MAIN
-          old_approved="$(python3 - <<'PY'
+          read -r old_version old_approved < <(python3 - <<'PY'
           import json
-          print(json.load(open('APPROVED-SOURCE.json', encoding='utf-8'))['approved_revision'])
+          value = json.load(open('APPROVED-SOURCE.json', encoding='utf-8'))
+          print(value['version'], value['approved_revision'])
           PY
-          )"
+          )
+          [[ "$old_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail APPROVED_VERSION_INVALID
+          [[ "$old_approved" =~ ^[0-9a-f]{40}$ ]] || fail APPROVED_REVISION_INVALID
           test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .draft)" = "false" || fail SOURCE_RELEASE_DRAFT
           test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .prerelease)" = "false" || fail SOURCE_RELEASE_PRERELEASE
           assets="$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq '.assets | length')"
@@ -69,7 +72,10 @@ jobs:
           grep -Fxq "$sidecar_name" <<<"$asset_names" || fail SOURCE_RUNTIME_SIDECAR_MISSING
           git remote add approved "https://github.com/$SOURCE_REPOSITORY.git"
           git fetch --no-tags approved main
+          git fetch --force approved "refs/tags/v$old_version:refs/tags/approved-base-v$old_version"
           git fetch --force approved "refs/tags/v$version:refs/tags/source-v$version"
+          approved_base_sha="$(git rev-parse "refs/tags/approved-base-v$old_version^{}")"
+          test "$approved_base_sha" = "$old_approved" || fail APPROVED_REVISION_TAG_MISMATCH
           git cat-file -e "$old_approved^{commit}" || fail APPROVED_REVISION_UNAVAILABLE
           source_sha="$(git rev-parse "refs/tags/source-v$version^{}")"
           test "$(git show "$source_sha:VERSION")" = "$version" || fail SOURCE_VERSION_MISMATCH
