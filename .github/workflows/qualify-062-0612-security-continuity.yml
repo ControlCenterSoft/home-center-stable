@@ -1,0 +1,151 @@
+name: Qualify HC 0.62 continuity from Stable 0.61.2 security patch
+
+on:
+  push:
+    branches:
+      - evidence/0.62-0612-security-continuity-b1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hc-062-0612-security-continuity
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOURCE_REPOSITORY: ControlCenterSoft/home-center-development
+      OLD_VERSION: 0.61.2
+      OLD_SHA: ff5ef0c7fb878ee28ff314cd5809c8cb0df2f726
+      NEW_VERSION: 0.62.0
+      NEW_SHA: 794403953fd956d9bf69629b66cfd2b768be770a
+    steps:
+      - name: Checkout evidence boundary
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Fetch exact official source tags
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git remote add source "https://github.com/$SOURCE_REPOSITORY.git"
+          git fetch --force source "refs/tags/v$OLD_VERSION:refs/tags/hc-old"
+          git fetch --force source "refs/tags/v$NEW_VERSION:refs/tags/hc-new"
+          test "$(git rev-parse 'refs/tags/hc-old^{}')" = "$OLD_SHA"
+          test "$(git rev-parse 'refs/tags/hc-new^{}')" = "$NEW_SHA"
+          test "$(git show "$OLD_SHA:VERSION")" = "$OLD_VERSION"
+          test "$(git show "$NEW_SHA:VERSION")" = "$NEW_VERSION"
+
+      - name: Prove isolated security patch is preserved byte-for-byte
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          old = os.environ['OLD_SHA']
+          new = os.environ['NEW_SHA']
+
+          def run(*args: str) -> str:
+              return subprocess.check_output(args, text=True).strip()
+
+          def blob(commit: str, path: str) -> str:
+              return run('git', 'rev-parse', f'{commit}:{path}')
+
+          def payload(commit: str, path: str) -> bytes:
+              return subprocess.check_output(['git', 'show', f'{commit}:{path}'])
+
+          merge_base = run('git', 'merge-base', old, new)
+          ancestor = subprocess.run(
+              ['git', 'merge-base', '--is-ancestor', old, new],
+              check=False,
+          ).returncode == 0
+          if ancestor:
+              raise SystemExit('EXPECTED_ISOLATED_PATCH_BUT_OLD_IS_ANCESTOR')
+
+          raw = run('git', 'diff', '--name-status', '--no-renames', merge_base, old, '--')
+          changes: list[tuple[str, str]] = []
+          for line in raw.splitlines():
+              if not line:
+                  continue
+              status, path = line.split('\t', 1)
+              changes.append((status, path))
+
+          release_only = {
+              'VERSION',
+              'pyproject.toml',
+              'product/control-plane/src/home_center/__init__.py',
+              'product/web/static/index.html',
+          }
+          critical_required = {
+              'contracts/household/vpn-egress-route-decision.v1.schema.json',
+              'product/control-plane/src/home_center/vpn_egress_policy.py',
+              'product/control-plane/src/home_center/vpn_egress_policy_api.py',
+              'product/control-plane/src/home_center/vpn_egress_policy_validation.py',
+              'tests/test_vpn_egress_policy.py',
+              'tests/test_vpn_egress_policy_api.py',
+              'tests/test_vpn_egress_policy_validation.py',
+          }
+          matched: list[dict[str, str]] = []
+          observed_critical: set[str] = set()
+
+          for status, path in changes:
+              if path in release_only or path.startswith('docs/releases/') or path.startswith('tests/test_release_'):
+                  continue
+              if status not in {'A', 'M'}:
+                  raise SystemExit(f'UNSUPPORTED_PATCH_DELTA:{status}:{path}')
+              old_blob = blob(old, path)
+              new_blob = blob(new, path)
+              if old_blob != new_blob:
+                  raise SystemExit(f'SECURITY_PATCH_CONTINUITY_MISMATCH:{path}')
+              old_bytes = payload(old, path)
+              new_bytes = payload(new, path)
+              if old_bytes != new_bytes:
+                  raise SystemExit(f'SECURITY_PATCH_CONTENT_MISMATCH:{path}')
+              matched.append({
+                  'path': path,
+                  'git_blob': old_blob,
+                  'sha256': hashlib.sha256(old_bytes).hexdigest(),
+              })
+              if path in critical_required:
+                  observed_critical.add(path)
+
+          missing = sorted(critical_required - observed_critical)
+          if missing:
+              raise SystemExit('SECURITY_PATCH_REQUIRED_FILE_MISSING:' + ','.join(missing))
+
+          evidence = {
+              'schema': 'home-center.release-security-patch-continuity.v1',
+              'old_version': os.environ['OLD_VERSION'],
+              'old_revision': old,
+              'new_version': os.environ['NEW_VERSION'],
+              'new_revision': new,
+              'merge_base': merge_base,
+              'old_is_ancestor_of_new': False,
+              'policy': 'all non-release-only files changed by the approved isolated patch must be byte-identical in the new release',
+              'matched_files': matched,
+          }
+          Path('hc-0.62.0-from-0.61.2-security-continuity.json').write_text(
+              json.dumps(evidence, sort_keys=True, separators=(',', ':')) + '\n',
+              encoding='utf-8',
+          )
+          print(f"HC_RELEASE_SECURITY_PATCH_CONTINUITY=PASS matched={len(matched)} merge_base={merge_base}")
+          PY
+
+      - name: Preserve exact continuity evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hc-0.62.0-from-0.61.2-security-continuity
+          path: hc-0.62.0-from-0.61.2-security-continuity.json
+          if-no-files-found: error
+          retention-days: 30
