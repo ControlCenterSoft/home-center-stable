@@ -1,0 +1,59 @@
+name: Materialize qualified HC 0.62 continuity fix bundle
+
+on:
+  push:
+    branches:
+      - artifact/0.62-continuity-fix-bundle
+
+permissions:
+  contents: read
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+          cache: ""
+      - name: Materialize deterministic qualified patch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          workflow = Path('.github/workflows/promote-qualified-stable-v10.yml')
+          text = workflow.read_text(encoding='utf-8')
+          old = '''          old_approved="$(python3 - <<'PY'\n          import json\n          print(json.load(open('APPROVED-SOURCE.json', encoding='utf-8'))['approved_revision'])\n          PY\n          )"\n          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .draft)" = "false" || fail SOURCE_RELEASE_DRAFT\n          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .prerelease)" = "false" || fail SOURCE_RELEASE_PRERELEASE\n          assets="$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq '.assets | length')"\n          [[ "$assets" =~ ^[0-9]+$ ]] && (( assets >= 2 )) || fail SOURCE_RELEASE_ASSETS_INCOMPLETE\n          runtime_name="home-center-${version}-linux-amd64.tar.gz"\n          sidecar_name="${runtime_name}.sha256"\n          asset_names="$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq '.assets[].name')"\n          grep -Fxq "$runtime_name" <<<"$asset_names" || fail SOURCE_RUNTIME_ASSET_MISSING\n          grep -Fxq "$sidecar_name" <<<"$asset_names" || fail SOURCE_RUNTIME_SIDECAR_MISSING\n          git remote add approved "https://github.com/$SOURCE_REPOSITORY.git"\n          git fetch --no-tags approved main\n          git fetch --force approved "refs/tags/v$version:refs/tags/source-v$version"\n          git cat-file -e "$old_approved^{commit}" || fail APPROVED_REVISION_UNAVAILABLE\n          source_sha="$(git rev-parse "refs/tags/source-v$version^{}")"\n          test "$(git show "$source_sha:VERSION")" = "$version" || fail SOURCE_VERSION_MISMATCH\n          git merge-base --is-ancestor "$old_approved" "$source_sha" || fail SOURCE_NOT_DESCENDANT_OF_APPROVED_BASE\n'''
+          new = '''          read -r old_version old_approved < <(python3 - <<'PY'\n          import json\n          value = json.load(open('APPROVED-SOURCE.json', encoding='utf-8'))\n          print(value['version'], value['approved_revision'])\n          PY\n          )\n          [[ "$old_version" =~ ^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$ ]] || fail APPROVED_VERSION_INVALID\n          [[ "$old_approved" =~ ^[0-9a-f]{40}$ ]] || fail APPROVED_REVISION_INVALID\n          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .draft)" = "false" || fail SOURCE_RELEASE_DRAFT\n          test "$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq .prerelease)" = "false" || fail SOURCE_RELEASE_PRERELEASE\n          assets="$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq '.assets | length')"\n          [[ "$assets" =~ ^[0-9]+$ ]] && (( assets >= 2 )) || fail SOURCE_RELEASE_ASSETS_INCOMPLETE\n          runtime_name="home-center-${version}-linux-amd64.tar.gz"\n          sidecar_name="${runtime_name}.sha256"\n          asset_names="$(gh api "repos/$SOURCE_REPOSITORY/releases/tags/v$version" --jq '.assets[].name')"\n          grep -Fxq "$runtime_name" <<<"$asset_names" || fail SOURCE_RUNTIME_ASSET_MISSING\n          grep -Fxq "$sidecar_name" <<<"$asset_names" || fail SOURCE_RUNTIME_SIDECAR_MISSING\n          git remote add approved "https://github.com/$SOURCE_REPOSITORY.git"\n          git fetch --no-tags approved main\n          git fetch --force approved "refs/tags/v$old_version:refs/tags/approved-base-v$old_version"\n          git fetch --force approved "refs/tags/v$version:refs/tags/source-v$version"\n          approved_base_sha="$(git rev-parse "refs/tags/approved-base-v$old_version^{}")"\n          [[ "$approved_base_sha" == "$old_approved" ]] || fail APPROVED_REVISION_TAG_MISMATCH\n          git cat-file -e "$old_approved^{commit}" || fail APPROVED_REVISION_UNAVAILABLE\n          source_sha="$(git rev-parse "refs/tags/source-v$version^{}")"\n          test "$(git show "$source_sha:VERSION")" = "$version" || fail SOURCE_VERSION_MISMATCH\n          if ! git merge-base --is-ancestor "$old_approved" "$source_sha"; then\n            echo "SOURCE_NOT_DESCENDANT_OF_APPROVED_BASE: evaluating exact isolated-patch continuity" >&2\n            merge_base="$(git merge-base "$old_approved" "$source_sha")" || fail SOURCE_PATCH_CONTINUITY_BASE_MISSING\n            continuity_checked=0\n            while IFS=$'\\t' read -r status path; do\n              [[ -n "$status" && -n "$path" ]] || continue\n              case "$path" in\n                VERSION|pyproject.toml|product/control-plane/src/home_center/__init__.py|product/web/static/index.html|docs/releases/*|tests/test_release_*) continue ;;\n              esac\n              case "$status" in\n                A|M)\n                  old_blob="$(git rev-parse "$old_approved:$path" 2>/dev/null)" || fail SOURCE_PATCH_CONTINUITY_FILE_MISSING\n                  source_blob="$(git rev-parse "$source_sha:$path" 2>/dev/null)" || fail SOURCE_PATCH_CONTINUITY_FILE_MISSING\n                  [[ "$old_blob" == "$source_blob" ]] || { echo "patch continuity mismatch: $path" >&2; fail SOURCE_PATCH_CONTINUITY_MISMATCH; }\n                  (( continuity_checked += 1 )) ;;\n                D)\n                  if git cat-file -e "$source_sha:$path" 2>/dev/null; then echo "patch continuity deletion mismatch: $path" >&2; fail SOURCE_PATCH_CONTINUITY_MISMATCH; fi\n                  (( continuity_checked += 1 )) ;;\n                *) fail SOURCE_PATCH_CONTINUITY_STATUS_UNSUPPORTED ;;\n              esac\n            done < <(git diff --name-status --no-renames "$merge_base" "$old_approved" --)\n            (( continuity_checked > 0 )) || fail SOURCE_PATCH_CONTINUITY_EMPTY\n            echo "SOURCE_PATCH_CONTINUITY=PASS old=$old_approved source=$source_sha files=$continuity_checked"\n          fi\n'''
+          if text.count(old) != 1: raise SystemExit('PROMOTION_IDENTITY_BLOCK_NOT_UNIQUE')
+          workflow.write_text(text.replace(old, new, 1), encoding='utf-8')
+          contract = Path('tests/test_stable_promotion_v10_contract.py')
+          t = contract.read_text(encoding='utf-8')
+          marker = '\n\nif __name__ == "__main__":\n'
+          addition = '''\n    def test_isolated_patch_release_requires_exact_tag_and_patch_continuity(self) -> None:\n        text = WORKFLOW.read_text(encoding="utf-8")\n        self.assertIn('refs/tags/v$old_version:refs/tags/approved-base-v$old_version', text)\n        self.assertIn("APPROVED_REVISION_TAG_MISMATCH", text)\n        self.assertIn("git diff --name-status --no-renames", text)\n        self.assertIn("SOURCE_PATCH_CONTINUITY_MISMATCH", text)\n        self.assertIn("SOURCE_PATCH_CONTINUITY_EMPTY", text)\n        self.assertIn("docs/releases/*|tests/test_release_*", text)\n        self.assertIn("patch continuity mismatch: $path", text)\n        self.assertIn("SOURCE_NOT_DESCENDANT_OF_APPROVED_BASE: evaluating exact isolated-patch continuity", text)\n'''
+          if marker not in t: raise SystemExit('PROMOTION_CONTRACT_INSERTION_POINT_MISSING')
+          contract.write_text(t.replace(marker, addition + marker, 1), encoding='utf-8')
+          PY
+          rm -f .github/workflows/materialize-062-continuity-fix.yml SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          p=Path('deploy/scripts/build-release.py'); s=importlib.util.spec_from_file_location('r',p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); m.create_source_manifest(Path.cwd())
+          PY
+          mkdir -p bundle/.github/workflows bundle/tests
+          cp .github/workflows/promote-qualified-stable-v10.yml bundle/.github/workflows/
+          cp tests/test_stable_promotion_v10_contract.py bundle/tests/
+          cp SOURCE-MANIFEST.sha256 bundle/
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hc-062-qualified-continuity-fix-bundle
+          path: bundle
+          if-no-files-found: error
+          retention-days: 7
