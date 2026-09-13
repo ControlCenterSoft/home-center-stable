@@ -15,6 +15,7 @@ class StablePromotionV10ContractTests(unittest.TestCase):
         self.assertIn("PROMOTION_NOT_CREATED_FROM_MAIN", text)
         self.assertIn("git ls-remote --exit-code origin refs/heads/main", text)
         self.assertIn("startsWith(github.ref_name, 'promote10/')", text)
+        self.assertIn("startsWith(github.ref_name, 'promote10r3/')", text)
 
     def test_source_release_and_runtime_assets_are_fail_closed(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
@@ -40,6 +41,8 @@ class StablePromotionV10ContractTests(unittest.TestCase):
         self.assertIn("promotion_contract_test.unlink()", text)
         self.assertIn("python3 deploy/scripts/build-release.py verify-source --source-root .", text)
         self.assertIn("python3 tests/security_gate_public_release.py", text)
+        self.assertIn("'policy-effective-state.js'", text)
+        self.assertIn("script = f'<script src=\"/static/{asset}\"></script>'", text)
         self.assertIn("python3 -m unittest discover -v -s tests -p 'test_*.py'", text)
         self.assertIn("HOME_CENTER_PUBLIC_EXPORT=PASS", text)
 

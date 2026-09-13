@@ -15,7 +15,7 @@ jobs:
     if: >-
       github.repository == 'ControlCenterSoft/home-center-stable' &&
       github.ref_type == 'branch' &&
-      (startsWith(github.ref_name, 'promote10/') || startsWith(github.ref_name, 'promote10r2/'))
+      (startsWith(github.ref_name, 'promote10/') || startsWith(github.ref_name, 'promote10r2/') || startsWith(github.ref_name, 'promote10r3/'))
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
@@ -189,6 +189,13 @@ jobs:
                       if '</body>' not in text:
                           raise SystemExit('PUBLIC_WEB_BODY_MISSING')
                       text = text.replace('</body>', insertion + '</body>', 1)
+              for asset in ('device-provider-resolution.js','policy-effective-state.js'):
+                  if (root / 'product/web/static' / asset).is_file():
+                      script = f'<script src="/static/{asset}"></script>'
+                      if script not in text:
+                          if '</body>' not in text:
+                              raise SystemExit('PUBLIC_WEB_BODY_MISSING')
+                          text = text.replace('</body>', f'  {script}\n</body>', 1)
               index.write_text(text, encoding='utf-8')
 
           for wf in (
