@@ -1,0 +1,74 @@
+name: Qualify HC 0.62 Stable promotion tooling restoration
+
+on:
+  push:
+    branches:
+      - tooling/restore-promotion-v10-for-062-b1
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hc-062-promotion-tooling-restoration
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: ${{ github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+          cache: ""
+
+      - name: Rebuild exact source manifest without the one-shot helper
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -f .github/workflows/promote-qualified-stable-v10.yml
+          test -f tests/test_stable_promotion_v10_contract.py
+          rm -f .github/workflows/repair-062-promotion-tooling-manifest.yml
+          rm -f SOURCE-MANIFEST.sha256
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+
+          tool = Path("deploy/scripts/build-release.py")
+          spec = importlib.util.spec_from_file_location("hc_public_release_build", tool)
+          if spec is None or spec.loader is None:
+              raise SystemExit("RELEASE_TOOL_IMPORT_FAILED")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          module.create_source_manifest(Path.cwd())
+          PY
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+
+      - name: Qualify promotion tooling and public Stable boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m unittest -v tests.test_stable_promotion_v10_contract
+          PYTHONPATH=product/control-plane/src python3 -m unittest discover -v -s tests -p 'test_*.py'
+          python3 tests/security_gate_public_release.py
+          PYTHONPATH=product/control-plane/src python3 -c 'import home_center.actions, home_center.api, home_center.module_admission, home_center.server'
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+
+      - name: Persist exact qualified tooling tree
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'HC 0.62: bind guarded Stable promotion tooling'
+          git push origin "HEAD:$GITHUB_REF_NAME"
