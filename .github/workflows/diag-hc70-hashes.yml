@@ -1,0 +1,24 @@
+name: Diagnostic HC70 hashes
+
+on:
+  push:
+    branches:
+      - diag/hc70-hashes
+
+permissions:
+  contents: read
+
+jobs:
+  hashes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Report exact SHA-256
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sha256sum \
+            .github/workflows/promote-qualified-stable-v11.yml \
+            tests/test_stable_promotion_v11_contract.py
