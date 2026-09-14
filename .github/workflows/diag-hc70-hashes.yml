@@ -1,4 +1,4 @@
-name: Diagnostic HC70 hashes
+name: Diagnostic HC70 manifest drift
 
 on:
   push:
@@ -9,16 +9,58 @@ permissions:
   contents: read
 
 jobs:
-  hashes:
+  drift:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - name: Report exact SHA-256
+      - name: Report exact source-manifest drift
         shell: bash
         run: |
           set -Eeuo pipefail
-          sha256sum \
-            .github/workflows/promote-qualified-stable-v11.yml \
-            tests/test_stable_promotion_v11_contract.py
+          python3 - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+
+          root = Path.cwd()
+          diagnostic = '.github/workflows/diag-hc70-hashes.yml'
+          manifest_path = root / 'SOURCE-MANIFEST.sha256'
+          expected = {}
+          for lineno, raw in enumerate(manifest_path.read_text(encoding='ascii').splitlines(), 1):
+              if not raw:
+                  continue
+              digest, sep, rel = raw.partition('  ')
+              if not sep or len(digest) != 64 or rel in expected:
+                  raise SystemExit(f'MANIFEST_PARSE_ERROR line={lineno}')
+              expected[rel] = digest
+
+          actual = {}
+          for directory, names, filenames in os.walk(root, topdown=True, followlinks=False):
+              base = Path(directory)
+              rel_dir = base.relative_to(root)
+              names[:] = sorted(name for name in names if name not in {'.git', '__pycache__'})
+              for name in sorted(filenames):
+                  path = base / name
+                  rel = path.relative_to(root).as_posix()
+                  if rel in {'SOURCE-MANIFEST.sha256', diagnostic}:
+                      continue
+                  if '.git' in path.parts or '__pycache__' in path.parts or path.is_symlink() or not path.is_file():
+                      continue
+                  actual[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+          drift = False
+          for rel in sorted(set(actual) - set(expected)):
+              print(f'MISSING_IN_MANIFEST {rel} {actual[rel]}')
+              drift = True
+          for rel in sorted(set(expected) - set(actual)):
+              print(f'EXTRA_IN_MANIFEST {rel} {expected[rel]}')
+              drift = True
+          for rel in sorted(set(actual) & set(expected)):
+              if actual[rel] != expected[rel]:
+                  print(f'HASH_MISMATCH {rel} manifest={expected[rel]} actual={actual[rel]}')
+                  drift = True
+          if not drift:
+              print('SOURCE_MANIFEST_DRIFT=NONE')
+          PY
