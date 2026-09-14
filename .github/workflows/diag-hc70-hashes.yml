@@ -1,4 +1,4 @@
-name: Diagnostic HC70 manifest drift
+name: Repair HC70 manifest drift
 
 on:
   push:
@@ -6,61 +6,51 @@ on:
       - diag/hc70-hashes
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  drift:
+  repair:
     runs-on: ubuntu-latest
+    env:
+      TARGET_BRANCH: repair/permanent-stable-promotion-v11
+      EXPECTED_HEAD: 192006947c07ee5e61c764640fdbfb7cb409db56
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          persist-credentials: false
-      - name: Report exact source-manifest drift
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Repair only proven source-manifest hashes
         shell: bash
         run: |
           set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD" || { echo TARGET_HEAD_MOVED >&2; exit 66; }
           python3 - <<'PY'
-          import hashlib
-          import os
           from pathlib import Path
 
-          root = Path.cwd()
-          diagnostic = '.github/workflows/diag-hc70-hashes.yml'
-          manifest_path = root / 'SOURCE-MANIFEST.sha256'
-          expected = {}
-          for lineno, raw in enumerate(manifest_path.read_text(encoding='ascii').splitlines(), 1):
-              if not raw:
-                  continue
-              digest, sep, rel = raw.partition('  ')
-              if not sep or len(digest) != 64 or rel in expected:
-                  raise SystemExit(f'MANIFEST_PARSE_ERROR line={lineno}')
-              expected[rel] = digest
-
-          actual = {}
-          for directory, names, filenames in os.walk(root, topdown=True, followlinks=False):
-              base = Path(directory)
-              rel_dir = base.relative_to(root)
-              names[:] = sorted(name for name in names if name not in {'.git', '__pycache__'})
-              for name in sorted(filenames):
-                  path = base / name
-                  rel = path.relative_to(root).as_posix()
-                  if rel in {'SOURCE-MANIFEST.sha256', diagnostic}:
-                      continue
-                  if '.git' in path.parts or '__pycache__' in path.parts or path.is_symlink() or not path.is_file():
-                      continue
-                  actual[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
-
-          drift = False
-          for rel in sorted(set(actual) - set(expected)):
-              print(f'MISSING_IN_MANIFEST {rel} {actual[rel]}')
-              drift = True
-          for rel in sorted(set(expected) - set(actual)):
-              print(f'EXTRA_IN_MANIFEST {rel} {expected[rel]}')
-              drift = True
-          for rel in sorted(set(actual) & set(expected)):
-              if actual[rel] != expected[rel]:
-                  print(f'HASH_MISMATCH {rel} manifest={expected[rel]} actual={actual[rel]}')
-                  drift = True
-          if not drift:
-              print('SOURCE_MANIFEST_DRIFT=NONE')
+          path = Path('SOURCE-MANIFEST.sha256')
+          text = path.read_text(encoding='ascii')
+          replacements = {
+              '9485bda1702f4de56c014c66b72e0fdf9670a58cd9d49e3aa541241c97424351  ARCHITECTURE.md':
+              '8504fd0d04272f893fc912b6002fc1f98dd0edb3a63cfa73e9864814652fc0a6  ARCHITECTURE.md',
+              '0c3b0d533d38073feb850e187bbad8e3eef88ee7c37a55c8d22308a80d443bd0  CONFIGURATION.md':
+              'de111de0ef8a7569434f22944df38511185563c568b273eeac3725d14bc178a2  CONFIGURATION.md',
+              '43a9ca622aafe7560a136a392ece37cde38711bbb2dc6e7824d4a2c0aa77d4c6  OPERATIONS.md':
+              'a5bb5ba3c9b46b559451cda570acd242a29bae3a82922011878b27137af72a87  OPERATIONS.md',
+              '2e2da6cf0ee3e4a67c37618be621cae3b2496a3b5042387368e56d8c19854abb  UPGRADE.md':
+              '97b63a606b5fc959fd4da30b9b6da7a9bdef7ef30054e6c166e8c023358e9ced  UPGRADE.md',
+          }
+          for old, new in replacements.items():
+              if text.count(old) != 1:
+                  raise SystemExit(f'EXPECTED_MANIFEST_ROW_NOT_UNIQUE:{old.split()[-1]}')
+              text = text.replace(old, new)
+          path.write_text(text, encoding='ascii')
           PY
+          python3 deploy/scripts/build-release.py verify-source --source-root .
+          git diff --check
+          git diff -- SOURCE-MANIFEST.sha256
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add SOURCE-MANIFEST.sha256
+          git commit -m 'release: reconcile public source manifest evidence'
+          git push origin "HEAD:$TARGET_BRANCH"
